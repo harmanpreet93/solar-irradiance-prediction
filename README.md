@@ -1,3 +1,3 @@
 ## Solar Irradiance - IFT6759
 
-### Team08
+### Team 08
