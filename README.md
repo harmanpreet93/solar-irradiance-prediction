@@ -9,7 +9,7 @@
 
 ### Coding Standards
 
-* Lint your code before submiting a pull request
+* Lint your code as per PEP8 before submiting a pull request
 * Pull requests are required for merging to master for major changes
 * Use your own branch for major work, don't use master
 * No large files allowed in git
