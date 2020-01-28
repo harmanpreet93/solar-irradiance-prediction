@@ -18,15 +18,15 @@
 ### To run the evalutation script:
 
 ```console
-source ./default_env/bin/activate
-./Solar-irradiance-Team08-IFT6759/run_evaluator.sh
+source ../default_env/bin/activate
+./run_evaluator.sh
 ```
 
 ### To setup a new environment:
 
 ```console
 module load python/3.7
-virtualenv my_env --no-download
-source ./default_env/bin/activate
-pip install -r ./Solar-irradiance-Team08-IFT6759/requirements.txt
+virtualenv ../my_env --no-download
+source ../my_env/bin/activate
+pip install -r requirements.txt
 ```
