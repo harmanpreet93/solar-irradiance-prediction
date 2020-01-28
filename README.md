@@ -14,3 +14,19 @@
 * Use your own branch for major work, don't use master
 * No large files allowed in git
 * Mark task in progress on Kanban before starting work
+
+### To run the evalutation script:
+
+```console
+source ./default_env/bin/activate
+./Solar-irradiance-Team08-IFT6759/run_evaluator.sh
+```
+
+### To setup a new environment:
+
+```console
+module load python/3.7
+virtualenv my_env --no-download
+source ./default_env/bin/activate
+pip install -r ./Solar-irradiance-Team08-IFT6759/requirements.txt
+```
