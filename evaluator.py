@@ -55,30 +55,9 @@ def prepare_dataloader(
     # WE ARE PROVIDING YOU WITH A DUMMY DATA GENERATOR FOR DEMONSTRATION PURPOSES.
     # MODIFY EVERYTHINGIN IN THIS BLOCK AS YOU SEE FIT
 
-    def dummy_data_generator():
-        """
-        Generate dummy data for the model, only for example purposes.
-        """
-        batch_size = 32
-        image_dim = (64, 64)
-        n_channels = 5
-        output_seq_len = 4
-
-        for i in range(0, len(target_datetimes), batch_size):
-            batch_of_datetimes = target_datetimes[i:i+batch_size]
-            samples = tf.random.uniform(shape=(
-                len(batch_of_datetimes), image_dim[0], image_dim[1], n_channels
-            ))
-            targets = tf.zeros(shape=(
-                len(batch_of_datetimes), output_seq_len
-            ))
-            # Remember that you do not have access to the targets.
-            # Your dataloader should handle this accordingly.
-            yield samples, targets
-
-    data_loader = tf.data.Dataset.from_generator(
-        dummy_data_generator, (tf.float32, tf.float32)
-    )
+    from data_loader import DataLoader
+    DL = DataLoader(dataframe, target_datetimes, stations, target_time_offsets, config)
+    data_loader = DL.get_data_loader()
 
     ################################### MODIFY ABOVE ##################################
 
@@ -107,19 +86,8 @@ def prepare_model(
 
     ################################### MODIFY BELOW ##################################
 
-    class DummyModel(tf.keras.Model):
-
-      def __init__(self, target_time_offsets):
-        super(DummyModel, self).__init__()
-        self.flatten = tf.keras.layers.Flatten()
-        self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu)
-        self.dense2 = tf.keras.layers.Dense(len(target_time_offsets), activation=tf.nn.softmax)
-
-      def call(self, inputs):
-        x = self.dense1(self.flatten(inputs))
-        return self.dense2(x)
-
-    model = DummyModel(target_time_offsets)
+    from main_model import MainModel
+    model = MainModel(stations, target_time_offsets, config)
 
     ################################### MODIFY ABOVE ##################################
 

@@ -1,0 +1,7 @@
+{
+    "python.pythonPath": "/home/alex/anaconda3/bin/python",
+    "python.linting.pycodestyleEnabled": true,
+    "python.linting.pycodestyleArgs": ["--ignore=E501,E266",],
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+}
