@@ -33,8 +33,12 @@ class DataLoader():
             by ``target_sequences``.
         """
         super().__init__()
+        self.dataframe = dataframe
         self.target_datetimes = target_datetimes
+        self.stations = stations
+        assert len([*stations]) == 1
         self.config = config
+        self.target_time_offsets = target_time_offsets
         self.data_loader = tf.data.Dataset.from_generator(
             self.dummy_data_generator, (tf.float32, tf.float32)
         )
@@ -49,7 +53,7 @@ class DataLoader():
         output_seq_len = 4
 
         for i in range(0, len(self.target_datetimes), batch_size):
-            batch_of_datetimes = self.target_datetimes[i:i+batch_size]
+            batch_of_datetimes = self.target_datetimes[i:(i + batch_size)]
             samples = tf.random.uniform(shape=(
                 len(batch_of_datetimes), image_dim[0], image_dim[1], n_channels
             ))
