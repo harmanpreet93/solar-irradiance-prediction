@@ -68,19 +68,22 @@ class DataLoader():
 
         return batch_of_true_GHIs, batch_of_clearsky_GHIs
 
-    def data_generator_fn(self):
+    def get_image_data(self, batch_of_datetimes):
         n_channels = 5
+        image = tf.random.uniform(shape=(
+            len(batch_of_datetimes), self.image_dim[0], self.image_dim[1], n_channels
+        ))
+        return image
 
+    def data_generator_fn(self):
         for i in range(0, len(self.target_datetimes), self.batch_size):
             batch_of_datetimes = self.target_datetimes[i:(i + self.batch_size)]
             true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, self.station)
+            images = self.get_image_data(batch_of_datetimes)
 
-            image = tf.random.uniform(shape=(
-                len(batch_of_datetimes), self.image_dim[0], self.image_dim[1], n_channels
-            ))
             # Remember that you do not have access to the targets.
             # Your dataloader should handle this accordingly.
-            yield image, clearsky_GHIs, true_GHIs
+            yield images, clearsky_GHIs, true_GHIs
 
     def get_data_loader(self):
         '''
