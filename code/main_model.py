@@ -1,5 +1,6 @@
 import typing
 import datetime
+import logging
 import tensorflow as tf
 
 
@@ -19,11 +20,17 @@ class MainModel(tf.keras.Model):
                 parameters aZre loaded automatically if the user provided a JSON file in their submission. Submitting
                 such a JSON file is completely optional, and this argument can be ignored if not needed.
         """
+        self.logger = logging.getLogger(__name__)
+        self.logger.debug("Model start")
         super(MainModel, self).__init__()
         self.flatten = tf.keras.layers.Flatten()
         self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu)
         self.dense2 = tf.keras.layers.Dense(len(target_time_offsets), activation=tf.nn.softmax)
 
     def call(self, inputs):
-        x = self.dense1(self.flatten(inputs))
-        return self.dense2(x)
+        self.logger.debug("Model call")
+        image = inputs[0]
+        clearsky_GHIs = inputs[1]
+        # x = self.dense1(self.flatten(image))
+        # x1 = self.dense2(x)
+        return clearsky_GHIs

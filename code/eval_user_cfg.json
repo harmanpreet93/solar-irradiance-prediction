@@ -1,5 +1,8 @@
 {
-  "alpha": 99.999,
-  "beta": "String",
-  "batch_size":32
+  "dummy_string": "string1",
+  "batch_size":32,
+  "image_size_m":64,
+  "image_size_n":64,
+  "image_offset_m":0,
+  "image_offset_n":0
 }
