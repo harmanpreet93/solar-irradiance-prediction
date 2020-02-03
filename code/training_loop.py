@@ -10,9 +10,12 @@ import tensorflow as tf
 import tqdm
 
 
-def generate_predictions(data_loader: tf.data.Dataset, model: tf.keras.Model, pred_count: int) -> np.ndarray:
+def generate_predictions(
+    data_loader: tf.data.Dataset,
+    model: tf.keras.Model,
+    pred_count: int
+) -> np.ndarray:
     """Generates and returns model predictions given the data prepared by a data loader."""
-    predictions = []
     with tqdm.tqdm("generating predictions", total=pred_count) as pbar:
         for iter_idx, minibatch in enumerate(data_loader):
             assert isinstance(minibatch, tuple) and len(minibatch) >= 2, \
@@ -27,9 +30,7 @@ def generate_predictions(data_loader: tf.data.Dataset, model: tf.keras.Model, pr
             if isinstance(pred, tf.Tensor):
                 pred = pred.numpy()
             assert pred.ndim == 2, "prediction tensor shape should be BATCH x SEQ_LENGTH"
-            predictions.append(pred)
             pbar.update(len(pred))
-    return np.concatenate(predictions, axis=0)
 
 
 def generate_all_predictions(
@@ -41,7 +42,6 @@ def generate_all_predictions(
 ) -> np.ndarray:
     """Generates and returns model predictions given the data prepared by a data loader."""
     # we will create one data loader per station to make sure we avoid mixups in predictions
-    predictions = []
     for station_idx, station_name in enumerate(target_stations):
         # usually, we would create a single data loader for all stations, but we just want to avoid trouble...
         stations = {station_name: target_stations[station_name]}
@@ -54,10 +54,7 @@ def generate_all_predictions(
         from main_model import MainModel
         model = MainModel(stations, target_time_offsets, user_config)
 
-        station_preds = generate_predictions(data_loader, model, pred_count=len(target_datetimes))
-        assert len(station_preds) == len(target_datetimes), "number of predictions mismatch with requested datetimes"
-        predictions.append(station_preds)
-    return np.concatenate(predictions, axis=0)
+        generate_predictions(data_loader, model, pred_count=len(target_datetimes))
 
 
 def parse_gt_ghi_values(
@@ -154,11 +151,7 @@ def main(
     target_datetimes, target_stations, target_time_offsets = \
         get_targets(dataframe, admin_config)
 
-    predictions = generate_all_predictions(target_stations, target_datetimes,
-                                           target_time_offsets, dataframe, user_config)
-    with open(preds_output_path, "w") as fd:
-        for pred in predictions:
-            fd.write(",".join([f"{v:0.03f}" for v in pred.tolist()]) + "\n")
+    generate_all_predictions(target_stations, target_datetimes, target_time_offsets, dataframe, user_config)
 
 
 def parse_args():

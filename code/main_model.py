@@ -27,6 +27,9 @@ class MainModel(tf.keras.Model):
         self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu)
         self.dense2 = tf.keras.layers.Dense(len(target_time_offsets), activation=tf.nn.softmax)
 
+    def train(self):
+        pass
+
     def call(self, inputs):
         self.logger.debug("Model call")
         image = inputs[0]
