@@ -1,6 +1,6 @@
 import datetime
 import typing
-import logging
+import model_logging
 
 import tensorflow as tf
 import pandas as pd
@@ -32,27 +32,22 @@ class DataLoader():
         """
         self.dataframe = dataframe
         self.target_datetimes = target_datetimes
-        self.stations = stations
+        self.stations = list(stations.keys())
         self.config = config
         self.target_time_offsets = target_time_offsets
         self.initialize()
 
     def initialize(self):
-        self.config_logging()
+        self.logger = model_logging.get_logger()
         self.logger.debug("Initialize start")
-        assert len([*self.stations]) == 1
-        self.station = list(self.stations.keys())[0]
+        # assert len([*self.stations]) == 1
+        self.test_station = self.stations[0]
         self.batch_size = self.config["batch_size"]
         self.image_dim = (self.config["image_size_m"], self.config["image_size_n"])
         self.output_seq_len = len(self.target_time_offsets)
         self.data_loader = tf.data.Dataset.from_generator(
-            self.data_generator_fn, output_types=(tf.float32, tf.float32, tf.float32)
+            self.data_generator_fn, output_types=(tf.float32, tf.float32, tf.float32, tf.float32)
         )
-
-    def config_logging(self):
-        logFormat = "%(asctime)s %(levelname)s: %(filename)s:%(funcName)s():%(lineno)d - %(message)s"
-        logging.basicConfig(level=logging.DEBUG, format=logFormat, filename="logging.log", filemode="w")
-        self.logger = logging.getLogger(__name__)
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
         batch_of_clearsky_GHIs = np.zeros((len(batch_of_datetimes), self.output_seq_len))
@@ -79,14 +74,15 @@ class DataLoader():
         return image
 
     def data_generator_fn(self):
-        for i in range(0, len(self.target_datetimes), self.batch_size):
-            batch_of_datetimes = self.target_datetimes[i:(i + self.batch_size)]
-            true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, self.station)
-            images = self.get_image_data(batch_of_datetimes)
+        for station_id in self.stations:
+            for i in range(0, len(self.target_datetimes), self.batch_size):
+                batch_of_datetimes = self.target_datetimes[i:(i + self.batch_size)]
+                true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, station_id)
+                images = self.get_image_data(batch_of_datetimes)
 
-            # Remember that you do not have access to the targets.
-            # Your dataloader should handle this accordingly.
-            yield images, clearsky_GHIs, true_GHIs
+                # Remember that you do not have access to the targets.
+                # Your dataloader should handle this accordingly.
+                yield images, clearsky_GHIs, true_GHIs, true_GHIs
 
     def get_data_loader(self):
         '''

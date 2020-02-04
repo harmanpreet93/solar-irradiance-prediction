@@ -4,42 +4,17 @@ import json
 import os
 import typing
 
+from data_loader import DataLoader
+from main_model import MainModel
+import model_logging
+
 import pandas as pd
 import numpy as np
 import tensorflow as tf
 import tqdm
 
 
-def loss_fn(y_true, y_pred):
-    # TODO
-    return tf.reduce_mean(tf.square(y_true - y_pred))
-
-
-def generate_predictions(
-    data_loader: tf.data.Dataset,
-    model: tf.keras.Model,
-    pred_count: int
-) -> np.ndarray:
-    """Generates and returns model predictions given the data prepared by a data loader."""
-    optimizer = tf.keras.optimizers.Adam()
-    with tqdm.tqdm("generating predictions", total=pred_count) as pbar:
-        for epoch in range(10):
-            cumulative_loss = 0.0
-            for iter_idx, minibatch in enumerate(data_loader):
-                assert isinstance(minibatch, tuple) and len(minibatch) >= 2
-                with tf.GradientTape() as tape:
-                    predictions = model(minibatch[:-1], training=True)
-                    targets = minibatch[-1]
-                    assert predictions.ndim == 2, "prediction tensor shape should be BATCH x SEQ_LENGTH"
-                    loss = loss_fn(y_true=targets, y_pred=predictions)
-                    cumulative_loss += loss
-                gradient = tape.gradient(loss, model.trainable_variables)
-                optimizer.apply_gradients(zip(gradient, model.trainable_variables))
-            print("Loss = " + str(loss.numpy()))
-            pbar.update(len(predictions))
-
-
-def generate_all_predictions(
+def train(
         target_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
         target_datetimes: typing.List[datetime.datetime],
         target_time_offsets: typing.List[datetime.timedelta],
@@ -47,64 +22,31 @@ def generate_all_predictions(
         user_config: typing.Dict[typing.AnyStr, typing.Any],
 ) -> np.ndarray:
     """Generates and returns model predictions given the data prepared by a data loader."""
-    # we will create one data loader per station to make sure we avoid mixups in predictions
-    for station_idx, station_name in enumerate(target_stations):
-        # usually, we would create a single data loader for all stations, but we just want to avoid trouble...
-        stations = {station_name: target_stations[station_name]}
-        print(f"preparing data loader & model for station '{station_name}' ({station_idx + 1}/{len(target_stations)})")
 
-        from data_loader import DataLoader
-        DL = DataLoader(dataframe, target_datetimes, stations, target_time_offsets, user_config)
-        data_loader = DL.get_data_loader()
+    DL = DataLoader(dataframe, target_datetimes, target_stations, target_time_offsets, user_config)
+    data_loader = DL.get_data_loader()
+    model = MainModel(target_stations, target_time_offsets, user_config)
+    logger = model_logging.get_logger()
 
-        from main_model import MainModel
-        model = MainModel(stations, target_time_offsets, user_config)
-
-        generate_predictions(data_loader, model, pred_count=len(target_datetimes))
-
-
-def parse_gt_ghi_values(
-        target_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
-        target_datetimes: typing.List[datetime.datetime],
-        target_time_offsets: typing.List[datetime.timedelta],
-        dataframe: pd.DataFrame,
-) -> np.ndarray:
-    """Parses all required station GHI values from the provided dataframe for the evaluation of predictions."""
-    gt = []
-    for station_idx, station_name in enumerate(target_stations):
-        station_ghis = dataframe[station_name + "_GHI"]
-        for target_datetime in target_datetimes:
-            seq_vals = []
-            for time_offset in target_time_offsets:
-                index = target_datetime + time_offset
-                if index in station_ghis.index:
-                    seq_vals.append(station_ghis.iloc[station_ghis.index.get_loc(index)])
-                else:
-                    seq_vals.append(float("nan"))
-            gt.append(seq_vals)
-    return np.concatenate(gt, axis=0)
-
-
-def parse_nighttime_flags(
-        target_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
-        target_datetimes: typing.List[datetime.datetime],
-        target_time_offsets: typing.List[datetime.timedelta],
-        dataframe: pd.DataFrame,
-) -> np.ndarray:
-    """Parses all required station daytime flags from the provided dataframe for the masking of predictions."""
-    flags = []
-    for station_idx, station_name in enumerate(target_stations):
-        station_flags = dataframe[station_name + "_DAYTIME"]
-        for target_datetime in target_datetimes:
-            seq_vals = []
-            for time_offset in target_time_offsets:
-                index = target_datetime + time_offset
-                if index in station_flags.index:
-                    seq_vals.append(station_flags.iloc[station_flags.index.get_loc(index)] > 0)
-                else:
-                    seq_vals.append(False)
-            flags.append(seq_vals)
-    return np.concatenate(flags, axis=0)
+    n_epoch = 10
+    optimizer = tf.keras.optimizers.Adam()
+    loss_fn = tf.keras.losses.mean_squared_error
+    with tqdm.tqdm("training", total=n_epoch) as pbar:
+        for epoch in range(n_epoch):
+            cumulative_loss = 0.0
+            for minibatch in data_loader:
+                assert isinstance(minibatch, tuple) and len(minibatch) >= 2
+                with tf.GradientTape() as tape:
+                    predictions = model(minibatch[:-1], training=True)
+                    targets = minibatch[-1]
+                    assert predictions.ndim == 2, "prediction tensor shape should be BATCH x SEQ_LENGTH"
+                    loss = tf.reduce_mean(loss_fn(y_true=targets, y_pred=predictions))
+                    cumulative_loss += loss
+                gradient = tape.gradient(loss, model.trainable_variables)
+                optimizer.apply_gradients(zip(gradient, model.trainable_variables))
+            logger.debug("Loss = " + str(cumulative_loss.numpy()))
+            pbar.update(1)
+    model.save_weights("model/my_model.h5")
 
 
 def load_files(user_config_path, admin_config_path):
@@ -142,7 +84,6 @@ def get_targets(dataframe, admin_config):
 
 
 def main(
-        preds_output_path: typing.AnyStr,
         admin_config_path: typing.AnyStr,
         user_config_path: typing.Optional[typing.AnyStr] = None,
 ) -> None:
@@ -157,13 +98,11 @@ def main(
     target_datetimes, target_stations, target_time_offsets = \
         get_targets(dataframe, admin_config)
 
-    generate_all_predictions(target_stations, target_datetimes, target_time_offsets, dataframe, user_config)
+    train(target_stations, target_datetimes, target_time_offsets, dataframe, user_config)
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("preds_out_path", type=str,
-                        help="path where the raw model predictions should be saved (for visualization purposes)")
     parser.add_argument("admin_cfg_path", type=str,
                         help="path to the JSON config file used to store test set/evaluation parameters")
     parser.add_argument("-u", "--user_cfg_path", type=str, default=None,
@@ -171,10 +110,14 @@ def parse_args():
     return parser.parse_args()
 
 
+def initialize():
+    pass
+
+
 if __name__ == "__main__":
     args = parse_args()
+    initialize()
     main(
-        preds_output_path=args.preds_out_path,
         admin_config_path=args.admin_cfg_path,
         user_config_path=args.user_cfg_path,
     )
