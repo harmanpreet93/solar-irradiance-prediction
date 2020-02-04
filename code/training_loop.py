@@ -10,27 +10,33 @@ import tensorflow as tf
 import tqdm
 
 
+def loss_fn(y_true, y_pred):
+    # TODO
+    return tf.reduce_mean(tf.square(y_true - y_pred))
+
+
 def generate_predictions(
     data_loader: tf.data.Dataset,
     model: tf.keras.Model,
     pred_count: int
 ) -> np.ndarray:
     """Generates and returns model predictions given the data prepared by a data loader."""
+    optimizer = tf.keras.optimizers.Adam()
     with tqdm.tqdm("generating predictions", total=pred_count) as pbar:
-        for iter_idx, minibatch in enumerate(data_loader):
-            assert isinstance(minibatch, tuple) and len(minibatch) >= 2, \
-                "the data loader should load each minibatch as a tuple with model input(s) and target tensors"
-            # remember: the minibatch should contain the input tensor(s) for the model as well as the GT (target)
-            # values, but since we are not training (and the GT is unavailable), we discard the last element
-            # see https://github.com/mila-iqia/ift6759/blob/master/projects/project1/datasources.md#pipeline-formatting
-            if len(minibatch) == 2:  # there is only one input + groundtruth, give the model the input directly
-                pred = model(minibatch[0])
-            else:  # the model expects multiple inputs, give them all at once using the tuple
-                pred = model(minibatch[:-1])
-            if isinstance(pred, tf.Tensor):
-                pred = pred.numpy()
-            assert pred.ndim == 2, "prediction tensor shape should be BATCH x SEQ_LENGTH"
-            pbar.update(len(pred))
+        for epoch in range(10):
+            cumulative_loss = 0.0
+            for iter_idx, minibatch in enumerate(data_loader):
+                assert isinstance(minibatch, tuple) and len(minibatch) >= 2
+                with tf.GradientTape() as tape:
+                    predictions = model(minibatch[:-1], training=True)
+                    targets = minibatch[-1]
+                    assert predictions.ndim == 2, "prediction tensor shape should be BATCH x SEQ_LENGTH"
+                    loss = loss_fn(y_true=targets, y_pred=predictions)
+                    cumulative_loss += loss
+                gradient = tape.gradient(loss, model.trainable_variables)
+                optimizer.apply_gradients(zip(gradient, model.trainable_variables))
+            print("Loss = " + str(loss.numpy()))
+            pbar.update(len(predictions))
 
 
 def generate_all_predictions(

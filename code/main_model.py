@@ -24,8 +24,8 @@ class MainModel(tf.keras.Model):
         self.logger.debug("Model start")
         super(MainModel, self).__init__()
         self.flatten = tf.keras.layers.Flatten()
-        self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu)
-        self.dense2 = tf.keras.layers.Dense(len(target_time_offsets), activation=tf.nn.softmax)
+        self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu, kernel_initializer=tf.keras.initializers.RandomNormal)
+        self.dense2 = tf.keras.layers.Dense(len(target_time_offsets), activation=tf.nn.softmax, kernel_initializer=tf.keras.initializers.RandomNormal)
 
     def train(self):
         pass
@@ -33,7 +33,7 @@ class MainModel(tf.keras.Model):
     def call(self, inputs):
         self.logger.debug("Model call")
         image = inputs[0]
-        clearsky_GHIs = inputs[1]
-        # x = self.dense1(self.flatten(image))
-        # x1 = self.dense2(x)
-        return clearsky_GHIs
+        # clearsky_GHIs = inputs[1]
+        x = self.dense1(self.flatten(image))
+        x1 = self.dense2(x)
+        return x1

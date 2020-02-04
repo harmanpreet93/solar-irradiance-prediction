@@ -1,6 +1,7 @@
 import datetime
 import typing
 import logging
+
 import tensorflow as tf
 import pandas as pd
 import numpy as np
@@ -61,6 +62,7 @@ class DataLoader():
             for j, time_offset in enumerate(self.target_time_offsets):
                 dt_index = dt + time_offset
                 batch_of_clearsky_GHIs[i, j] = self.dataframe.lookup([dt_index], [station_id + '_CLEARSKY_GHI'])
+                # If the true GHI is not provided, return 0s instead:
                 if station_id + "_GHI" in self.dataframe.columns:
                     batch_of_true_GHIs[i, j] = self.dataframe.lookup([dt_index], [station_id + '_GHI'])
 
@@ -70,6 +72,7 @@ class DataLoader():
 
     def get_image_data(self, batch_of_datetimes):
         n_channels = 5
+        # TODO: Not implemented yet, generate random data instead
         image = tf.random.uniform(shape=(
             len(batch_of_datetimes), self.image_dim[0], self.image_dim[1], n_channels
         ))
