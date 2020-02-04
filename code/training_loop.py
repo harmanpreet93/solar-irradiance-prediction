@@ -46,7 +46,7 @@ def train(
                 optimizer.apply_gradients(zip(gradient, model.trainable_variables))
             logger.debug("Loss = " + str(cumulative_loss.numpy()))
             pbar.update(1)
-    model.save_weights("model/my_model.h5")
+    model.save_weights("model/my_model", save_format="tf")
 
 
 def load_files(user_config_path, admin_config_path):

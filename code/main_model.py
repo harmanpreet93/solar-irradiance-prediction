@@ -33,6 +33,7 @@ class MainModel(tf.keras.Model):
         self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu, kernel_initializer=tf.keras.initializers.RandomNormal)
         self.dense2 = tf.keras.layers.Dense(len(self.target_time_offsets), activation=tf.nn.softmax, kernel_initializer=tf.keras.initializers.RandomNormal)
 
+
     def train(self):
         pass
 
