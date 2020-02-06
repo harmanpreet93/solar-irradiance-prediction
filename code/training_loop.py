@@ -6,7 +6,7 @@ import typing
 
 from data_loader import DataLoader
 from main_model import MainModel
-import model_logging
+from model_logging import get_logger
 
 import pandas as pd
 import numpy as np
@@ -23,10 +23,11 @@ def train(
 ) -> np.ndarray:
     """Generates and returns model predictions given the data prepared by a data loader."""
 
+
     DL = DataLoader(dataframe, target_datetimes, target_stations, target_time_offsets, user_config)
     data_loader = DL.get_data_loader()
     model = MainModel(target_stations, target_time_offsets, user_config)
-    logger = model_logging.get_logger()
+    logger = get_logger()
 
     n_epoch = 10
     optimizer = tf.keras.optimizers.Adam()
@@ -46,7 +47,12 @@ def train(
                 optimizer.apply_gradients(zip(gradient, model.trainable_variables))
             logger.debug("Loss = " + str(cumulative_loss.numpy()))
             pbar.update(1)
+
+    # save model weights
     model.save_weights("model/my_model", save_format="tf")
+
+    # return predictions from the model
+    return np.array([])
 
 
 def load_files(user_config_path, admin_config_path):

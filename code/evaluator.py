@@ -9,6 +9,9 @@ import numpy as np
 import tensorflow as tf
 import tqdm
 
+from data_loader import DataLoader
+from main_model import MainModel
+
 
 def prepare_dataloader(
         dataframe: pd.DataFrame,
@@ -53,9 +56,8 @@ def prepare_dataloader(
     """
     ################################## MODIFY BELOW ##################################
     # WE ARE PROVIDING YOU WITH A DUMMY DATA GENERATOR FOR DEMONSTRATION PURPOSES.
-    # MODIFY EVERYTHINGIN IN THIS BLOCK AS YOU SEE FIT
+    # MODIFY EVERYTHING IN IN THIS BLOCK AS YOU SEE FIT
 
-    from data_loader import DataLoader
     DL = DataLoader(dataframe, target_datetimes, stations, target_time_offsets, config)
     data_loader = DL.get_data_loader()
 
@@ -86,7 +88,6 @@ def prepare_model(
 
     ################################### MODIFY BELOW ##################################
 
-    from main_model import MainModel
     model = MainModel(stations, target_time_offsets, config)
 
     # model.train_on_batch()

@@ -2,7 +2,6 @@ import logging
 
 logger = None
 
-
 def get_logger():
     global logger
     if not logger:

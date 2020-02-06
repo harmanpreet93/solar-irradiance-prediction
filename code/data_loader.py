@@ -1,6 +1,6 @@
 import datetime
 import typing
-import model_logging
+from model_logging import get_logger
 
 import tensorflow as tf
 import pandas as pd
@@ -27,7 +27,7 @@ class DataLoader():
                 to predict. By definition, the GHI values must be provided for the offsets given by ``target_time_offsets``
                 which are added to each timestamp (T=0) in this datetimes list.
             stations: a map of station names of interest paired with their coordinates (latitude, longitude, elevation).
-            target_time_offsets: the list of timedeltas to predict GHIs for (by definition: [T=0, T+1h, T+3h, T+6h]).
+            target_time_offsets: the list of time-deltas to predict GHIs for (by definition: [T=0, T+1h, T+3h, T+6h]).
             config: configuration dictionary holding extra parameters
         """
         self.dataframe = dataframe
@@ -38,7 +38,7 @@ class DataLoader():
         self.initialize()
 
     def initialize(self):
-        self.logger = model_logging.get_logger()
+        self.logger = get_logger()
         self.logger.debug("Initialize start")
         # assert len([*self.stations]) == 1
         self.test_station = self.stations[0]
