@@ -130,3 +130,5 @@ dmypy.json
 
 # Output files
 output.txt
+.idea
+.DS_Store
