@@ -1,6 +1,6 @@
 import typing
 import datetime
-import logging
+from model_logging import get_logger
 import tensorflow as tf
 
 
@@ -27,21 +27,16 @@ class MainModel(tf.keras.Model):
         self.initialize()
 
     def initialize(self):
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger()
         self.logger.debug("Model start")
         self.flatten = tf.keras.layers.Flatten()
         self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu, kernel_initializer=tf.keras.initializers.RandomNormal)
         self.dense2 = tf.keras.layers.Dense(len(self.target_time_offsets), activation=tf.nn.softmax, kernel_initializer=tf.keras.initializers.RandomNormal)
 
-
-    def train(self):
-        pass
-
     def call(self, inputs):
         '''
         Defines the forward pass through our model
         '''
-        self.logger.debug("Model call")
         image = inputs[0]
         # clearsky_GHIs = inputs[1]
         true_GHIs = inputs[2]  # TODO: Temporary, true GHI should not be used here

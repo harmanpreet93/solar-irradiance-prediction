@@ -40,10 +40,7 @@ class DataLoader():
     def initialize(self):
         self.logger = get_logger()
         self.logger.debug("Initialize start")
-        # assert len([*self.stations]) == 1
         self.test_station = self.stations[0]
-        self.batch_size = self.config["batch_size"]
-        self.image_dim = (self.config["image_size_m"], self.config["image_size_n"])
         self.output_seq_len = len(self.target_time_offsets)
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn, output_types=(tf.float32, tf.float32, tf.float32, tf.float32)
@@ -67,16 +64,19 @@ class DataLoader():
 
     def get_image_data(self, batch_of_datetimes):
         n_channels = 5
+        image_size_m = self.config["image_size_m"]
+        image_size_n = self.config["image_size_n"]
         # TODO: Not implemented yet, generate random data instead
         image = tf.random.uniform(shape=(
-            len(batch_of_datetimes), self.image_dim[0], self.image_dim[1], n_channels
+            len(batch_of_datetimes), image_size_m, image_size_n, n_channels
         ))
         return image
 
     def data_generator_fn(self):
+        batch_size = self.config["batch_size"]
         for station_id in self.stations:
-            for i in range(0, len(self.target_datetimes), self.batch_size):
-                batch_of_datetimes = self.target_datetimes[i:(i + self.batch_size)]
+            for i in range(0, len(self.target_datetimes), batch_size):
+                batch_of_datetimes = self.target_datetimes[i:(i + batch_size)]
                 true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, station_id)
                 images = self.get_image_data(batch_of_datetimes)
 

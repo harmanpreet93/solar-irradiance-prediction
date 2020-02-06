@@ -29,8 +29,8 @@ def train(
     logger = get_logger()
 
     # set hyper-parameters
-    n_epoch = 10
-    learning_rate = 0.001
+    n_epoch = user_config["n_epoch"]
+    learning_rate = user_config["learning_rate"]
     # Optimizer: Adam - for decaying learning rate
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     # MSE loss: as it is a regression problem
@@ -51,7 +51,7 @@ def train(
                     cumulative_loss += loss
                 gradient = tape.gradient(loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradient, model.trainable_variables))
-            logger.debug("Loss = " + str(cumulative_loss.numpy()))
+            logger.debug("Epoch {0}/{1}, Loss = {2}".format(epoch + 1, n_epoch, cumulative_loss.numpy()))
             pbar.update(1)
 
     # save model weights
@@ -122,13 +122,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def initialize():
-    pass
-
-
 if __name__ == "__main__":
     args = parse_args()
-    initialize()
     main(
         admin_config_path=args.admin_cfg_path,
         user_config_path=args.user_cfg_path,

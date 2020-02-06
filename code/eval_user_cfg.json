@@ -1,6 +1,10 @@
 {
-  "dummy_string": "string1",
+  "model_file": "model/my_model.index",
+
   "batch_size":32,
+  "learning_rate":0.001,
+  "n_epoch":10,
+  
   "image_size_m":64,
   "image_size_n":64,
   "image_offset_m":0,
