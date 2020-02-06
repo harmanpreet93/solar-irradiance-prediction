@@ -23,15 +23,21 @@ def train(
 ) -> np.ndarray:
     """Generates and returns model predictions given the data prepared by a data loader."""
 
-
     DL = DataLoader(dataframe, target_datetimes, target_stations, target_time_offsets, user_config)
     data_loader = DL.get_data_loader()
     model = MainModel(target_stations, target_time_offsets, user_config)
     logger = get_logger()
 
+    # set hyper-parameters
     n_epoch = 10
-    optimizer = tf.keras.optimizers.Adam()
+    learning_rate = 0.001
+    # Optimizer: Adam - for decaying learning rate
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    # MSE loss: as it is a regression problem
+    # TODO: Better to use RMSE, as that's what we report in evaluation
     loss_fn = tf.keras.losses.mean_squared_error
+    # training starts here
+    # TODO: Add tensorboard logging
     with tqdm.tqdm("training", total=n_epoch) as pbar:
         for epoch in range(n_epoch):
             cumulative_loss = 0.0

@@ -17,7 +17,7 @@ class MainModel(tf.keras.Model):
             stations: a map of station names of interest paired with their coordinates (latitude, longitude, elevation).
             target_time_offsets: the list of timedeltas to predict GHIs for (by definition: [T=0, T+1h, T+3h, T+6h]).
             config: configuration dictionary holding any extra parameters that might be required by the user. These
-                parameters aZre loaded automatically if the user provided a JSON file in their submission. Submitting
+                parameters are loaded automatically if the user provided a JSON file in their submission. Submitting
                 such a JSON file is completely optional, and this argument can be ignored if not needed.
         """
         super(MainModel, self).__init__()
