@@ -89,6 +89,12 @@ def prepare_model(
     from main_model import MainModel
     model = MainModel(stations, target_time_offsets, config)
 
+    # model.train_on_batch()
+
+    weights_file = 'model/' + 'my_model.index'
+    assert os.path.exists(weights_file), "Model not trained!"
+    model.load_weights(weights_file)
+
     ################################### MODIFY ABOVE ##################################
 
     return model
