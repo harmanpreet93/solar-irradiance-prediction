@@ -8,7 +8,7 @@ import typing
 
 from pathlib import Path
 
-data_folder = Path("Documents/MILA/IFT6759")
+data_folder = Path("Documents/MILA/IFT6759/Solar-irradiance-Team08-IFT6759")
 
 with open(data_folder / 'pre_process_cfg.json', 'r') as fd:
     pre_process_config = json.load(fd)
@@ -61,15 +61,16 @@ def crop_images(
             x_coord = station_coordinates[1][0]
             y_coord = station_coordinates[1][1]
             with h5py.File(hdf5_path, "r") as h5_data:
-            ch1_data = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset)
-            ch2_data = utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset)
-            ch3_data = utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset)
-            ch4_data = utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset)
-            ch6_data = utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset)
+                ch1_data = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset)
+                ch2_data = utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset)
+                ch3_data = utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset)
+                ch4_data = utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset)
+                ch6_data = utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset)
 
-            ch1_crop = ch1_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
-            ch2_crop = ch2_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
-            ch3_crop = ch3_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
-            ch4_crop = ch4_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
-            ch6_crop = ch6_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
-            img_crop = np.stack((ch1_crop, ch2_crop, ch3_crop, ch4_crop, ch6_crop), axis=-1)
+                ch1_crop = ch1_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
+                ch2_crop = ch2_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
+                ch3_crop = ch3_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
+                ch4_crop = ch4_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
+                ch6_crop = ch6_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
+                img_crop = np.stack((ch1_crop, ch2_crop, ch3_crop, ch4_crop, ch6_crop), axis=-1)
+                # save images and output new dataframe
