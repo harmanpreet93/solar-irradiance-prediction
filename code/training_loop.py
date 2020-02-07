@@ -19,34 +19,39 @@ def compute_rmse(y_true, y_pred):
 
 
 def train(
-        target_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
-        training_datetimes: typing.List[datetime.datetime],
-        validation_datetimes: typing.List[datetime.datetime],
-        target_time_offsets: typing.List[datetime.timedelta],
+        tr_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
+        val_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
+        tr_datetimes: typing.List[datetime.datetime],
+        val_datetimes: typing.List[datetime.datetime],
+        tr_time_offsets: typing.List[datetime.timedelta],
+        val_time_offsets: typing.List[datetime.timedelta],
         dataframe: pd.DataFrame,
         user_config: typing.Dict[typing.AnyStr, typing.Any],
 ):
     """Trains and saves the model to file"""
 
-    Train_DL = DataLoader(dataframe, training_datetimes, target_stations, target_time_offsets, user_config)
-    Val_DL = DataLoader(dataframe, validation_datetimes, target_stations, target_time_offsets, user_config)
-
+    Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config)
+    Val_DL = DataLoader(dataframe, val_datetimes, val_stations, val_time_offsets, user_config)
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
 
-    model = MainModel(target_stations, target_time_offsets, user_config)
+    model = MainModel(tr_stations, tr_time_offsets, user_config)
     logger = get_logger()
+
+    nb_training_samples = len(tr_datetimes)
+    nb_validation_samples = len(val_datetimes)
 
     # set hyper-parameters
     nb_epoch = user_config["nb_epoch"]
     learning_rate = user_config["learning_rate"]
-    nb_training_samples = len(training_datetimes)
-    nb_validation_samples = len(validation_datetimes)
+
     # Optimizer: Adam - for decaying learning rate
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+
     # MSE loss: as it is a regression problem
     # TODO: Better to use RMSE, as that's what we report in evaluation
     loss_fn = tf.keras.losses.mean_squared_error
+
     # training starts here
     # TODO: Add tensorboard logging
     with tqdm.tqdm("training", total=nb_epoch) as pbar:
@@ -117,16 +122,14 @@ def clip_dataframe(dataframe, train_config):
     return dataframe
 
 
-def get_targets(dataframe, train_config, val_config):
-    train_target_datetimes = [datetime.datetime.fromisoformat(d) for d in train_config["target_datetimes"]]
-    val_target_datetimes = [datetime.datetime.fromisoformat(d) for d in val_config["target_datetimes"]]
-    assert train_target_datetimes and all([d in dataframe.index for d in train_target_datetimes])
-    assert val_target_datetimes and all([d in dataframe.index for d in val_target_datetimes])
+def get_targets(dataframe, config):
+    datetimes = [datetime.datetime.fromisoformat(d) for d in config["target_datetimes"]]
+    assert datetimes and all([d in dataframe.index for d in datetimes])
 
-    target_stations = train_config["stations"]
-    target_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in train_config["target_time_offsets"]]
+    stations = config["stations"]
+    time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in config["target_time_offsets"]]
 
-    return train_target_datetimes, val_target_datetimes, target_stations, target_time_offsets
+    return datetimes, stations, time_offsets
 
 
 def main(
@@ -142,10 +145,22 @@ def main(
     dataframe = \
         clip_dataframe(dataframe, train_config)
 
-    training_datetimes, validation_datetimes, target_stations, target_time_offsets = \
-        get_targets(dataframe, train_config, val_config)
+    tr_datetimes, tr_stations, tr_time_offsets = \
+        get_targets(dataframe, train_config)
 
-    train(target_stations, training_datetimes, validation_datetimes, target_time_offsets, dataframe, user_config)
+    val_datetimes, val_stations, val_time_offsets = \
+        get_targets(dataframe, val_config)
+
+    train(
+        tr_stations,
+        val_stations,
+        tr_datetimes,
+        val_datetimes,
+        tr_time_offsets,
+        val_time_offsets,
+        dataframe,
+        user_config
+    )
 
 
 def parse_args():
