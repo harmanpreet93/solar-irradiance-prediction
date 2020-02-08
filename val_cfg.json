@@ -1,4 +1,7 @@
 {
+  "dataframe_path": "data/catalog.helios.public.20100101-20160101.pkl",
+  "start_bound": "2015-01-01",
+  "end_bound": "2016-01-01",
   "stations": {
     "BND": [40.05192, -88.37309, 230],
     "TBL": [40.12498, -105.23680, 1689],
