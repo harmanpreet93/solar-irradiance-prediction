@@ -54,14 +54,14 @@ def prepare_dataloader(
         must correspond to one sequence of past imagery data. The tensors must be generated in the order given
         by ``target_sequences``.
     """
-    ################################## MODIFY BELOW ##################################
+    # MODIFY BELOW
     # WE ARE PROVIDING YOU WITH A DUMMY DATA GENERATOR FOR DEMONSTRATION PURPOSES.
     # MODIFY EVERYTHING IN IN THIS BLOCK AS YOU SEE FIT
 
     DL = DataLoader(dataframe, target_datetimes, stations, target_time_offsets, config)
     data_loader = DL.get_data_loader()
 
-    ################################### MODIFY ABOVE ##################################
+    # MODIFY ABOVE
 
     return data_loader
 
@@ -86,7 +86,7 @@ def prepare_model(
         A ``tf.keras.Model`` object that can be used to generate new GHI predictions given imagery tensors.
     """
 
-    ################################### MODIFY BELOW ##################################
+    # MODIFY BELOW
 
     model = MainModel(stations, target_time_offsets, config)
 
@@ -94,7 +94,7 @@ def prepare_model(
     assert os.path.exists(weights_file), "Model not trained!"
     model.load_weights(weights_file)
 
-    ################################### MODIFY ABOVE ##################################
+    # MODIFY ABOVE
 
     return model
 

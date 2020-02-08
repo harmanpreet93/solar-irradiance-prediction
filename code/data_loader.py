@@ -24,9 +24,9 @@ class DataLoader():
                 relevant timestamp values over the test period.
             target_datetimes: a list of timestamps that your data loader should use to provide imagery for your model.
                 The ordering of this list is important, as each element corresponds to a sequence of GHI values
-                to predict. By definition, the GHI values must be provided for the offsets given by ``target_time_offsets``
-                which are added to each timestamp (T=0) in this datetimes list.
-            stations: a map of station names of interest paired with their coordinates (latitude, longitude, elevation).
+                to predict. By definition, the GHI values must be provided for the offsets given by
+                ``target_time_offsets`` which are added to each timestamp (T=0) in this datetimes list.
+            stations: a map of station names of interest paired with their coordinates (latitude, longitude, elevation)
             target_time_offsets: the list of time-deltas to predict GHIs for (by definition: [T=0, T+1h, T+3h, T+6h]).
             config: configuration dictionary holding extra parameters
         """

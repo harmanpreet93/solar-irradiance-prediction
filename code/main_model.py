@@ -14,7 +14,7 @@ class MainModel(tf.keras.Model):
     ):
         """
         Args:
-            stations: a map of station names of interest paired with their coordinates (latitude, longitude, elevation).
+            stations: a map of station names of interest paired with their coordinates (latitude, longitude, elevation)
             target_time_offsets: the list of timedeltas to predict GHIs for (by definition: [T=0, T+1h, T+3h, T+6h]).
             config: configuration dictionary holding any extra parameters that might be required by the user. These
                 parameters are loaded automatically if the user provided a JSON file in their submission. Submitting
@@ -30,8 +30,16 @@ class MainModel(tf.keras.Model):
         self.logger = get_logger()
         self.logger.debug("Model start")
         self.flatten = tf.keras.layers.Flatten()
-        self.dense1 = tf.keras.layers.Dense(32, activation=tf.nn.relu, kernel_initializer=tf.keras.initializers.RandomNormal)
-        self.dense2 = tf.keras.layers.Dense(len(self.target_time_offsets), activation=tf.nn.softmax, kernel_initializer=tf.keras.initializers.RandomNormal)
+        self.dense1 = tf.keras.layers.Dense(
+            units=32,
+            activation=tf.nn.relu,
+            kernel_initializer=tf.keras.initializers.RandomNormal
+        )
+        self.dense2 = tf.keras.layers.Dense(
+            units=len(self.target_time_offsets),
+            activation=tf.nn.softmax,
+            kernel_initializer=tf.keras.initializers.RandomNormal
+        )
 
     def call(self, inputs):
         '''

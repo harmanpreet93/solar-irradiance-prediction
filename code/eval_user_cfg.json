@@ -3,7 +3,7 @@
 
   "batch_size":32,
   "learning_rate":0.001,
-  "n_epoch":10,
+  "nb_epoch":10,
   
   "image_size_m":64,
   "image_size_n":64,
