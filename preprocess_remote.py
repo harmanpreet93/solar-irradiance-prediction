@@ -1,7 +1,6 @@
 import utils
 import numpy as np
 import pandas as pd
-import cv2
 import h5py
 import json
 import typing
@@ -53,7 +52,7 @@ def crop_images(
     df = pd.read_pickle(dataframe_path) if dataframe_path else None
     df_copy = df.copy().replace(to_replace="nan",
                                 value=np.NaN).dropna(subset=["hdf5_8bit_path"])
-    coordinates = get_stations_coordinates(hdf5_path, stations)
+    coordinates = get_stations_coordinates(dataframe_path, stations)
     for index, row in df_copy.iterrows():
         hdf5_path = row["hdf5_8bit_path"]
         hdf5_offset = row["hdf5_8bit_offset"]
