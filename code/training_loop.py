@@ -29,17 +29,17 @@ def train(
         user_config: typing.Dict[typing.AnyStr, typing.Any],
 ):
     """Trains and saves the model to file"""
-
     Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config)
     Val_DL = DataLoader(dataframe, val_datetimes, val_stations, val_time_offsets, user_config)
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
 
-    model = MainModel(tr_stations, tr_time_offsets, user_config)
-    logger = get_logger()
-
     nb_training_samples = len(tr_datetimes)
     nb_validation_samples = len(val_datetimes)
+
+    model = MainModel(tr_stations, tr_time_offsets, user_config)
+
+    logger = get_logger()
 
     # set hyper-parameters
     nb_epoch = user_config["nb_epoch"]
@@ -48,9 +48,8 @@ def train(
     # Optimizer: Adam - for decaying learning rate
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
-    # MSE loss: as it is a regression problem
-    # TODO: Better to use RMSE, as that's what we report in evaluation
-    loss_fn = tf.keras.losses.mean_squared_error
+    # RMSE loss: as it is a regression problem
+    loss_fn = compute_rmse
 
     # training starts here
     # TODO: Add tensorboard logging
@@ -59,32 +58,25 @@ def train(
 
             # Train the model using the training set for one epoch
             cumulative_train_loss = 0.0
-            cumulative_train_rmse = 0.0
             for minibatch in train_data_loader:
                 with tf.GradientTape() as tape:
                     predictions = model(minibatch[:-1], training=True)
-                    loss = tf.reduce_mean(loss_fn(y_true=minibatch[-1], y_pred=predictions))
+                    loss = loss_fn(y_true=minibatch[-1], y_pred=predictions)
                 gradient = tape.gradient(loss, model.trainable_variables)
                 optimizer.apply_gradients(zip(gradient, model.trainable_variables))
                 cumulative_train_loss += loss
-                cumulative_train_rmse += compute_rmse(y_true=minibatch[-1], y_pred=predictions)
             cumulative_train_loss /= nb_training_samples
-            cumulative_train_rmse /= nb_training_samples
 
             # Evaluate model performance on the validation set after training for one epoch
             cumulative_val_loss = 0.0
-            cumulative_val_rmse = 0.0
             for minibatch in val_data_loader:
                 predictions = model(minibatch[:-1])
-                loss = tf.reduce_mean(loss_fn(y_true=minibatch[-1], y_pred=predictions))
-                cumulative_val_loss += loss
-                cumulative_val_rmse += compute_rmse(y_true=minibatch[-1], y_pred=predictions)
+                cumulative_val_loss += loss_fn(y_true=minibatch[-1], y_pred=predictions)
             cumulative_val_loss /= nb_validation_samples
-            cumulative_val_rmse /= nb_validation_samples
 
             logger.debug(
-                "Epoch {0}/{1}, Train RMSE = {2}, Val RMSE = {3}"
-                .format(epoch + 1, nb_epoch, cumulative_train_rmse.numpy(), cumulative_val_rmse.numpy())
+                "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
+                .format(epoch + 1, nb_epoch, cumulative_train_loss.numpy(), cumulative_val_loss.numpy())
             )
             pbar.update(1)
 
