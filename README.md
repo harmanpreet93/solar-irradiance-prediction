@@ -22,11 +22,24 @@ source ../default_env/bin/activate
 ./run_evaluator.sh
 ```
 
-### To setup a new environment:
+### To setup a new local environment:
 
 ```console
 module load python/3.7
-virtualenv ../my_env --no-download
-source ../my_env/bin/activate
-pip install -r requirements.txt
+virtualenv ../local_env
+source ../local_env/bin/activate
+pip install -r requirements_local.txt
+```
+
+### To setup a new server node environment:
+
+```console
+module load python/3.7
+virtualenv ../server_env --no-download
+source ../server_env/bin/activate
+pip install --no-index -r requirements.txt
+```
+OR, if no requirement.txt file is available:
+```console
+pip install --no-index tensorflow-gpu==2 pandas numpy tqdm
 ```
