@@ -1,6 +1,6 @@
 {
-    "dataframe_path"  : "Documents/MILA/IFT6759/catalog.helios.public.20100101-20160101.pkl",
-    "hdf5_path" : "Documents/MILA/IFT6759/hdf5v7_8bit_Jan_2015/2015.01.01.0800.h5",
+    "dataframe_path"  : "data/catalog.helios.public.20100101-20160101.pkl",
+    "hdf5_path" : "data/hdf5v7_8bit_Jan_2015/2015.01.01.0800.h5",
     "stations": {
         "BND": [40.05192, -88.37309, 230],
         "TBL": [40.12498, -105.23680, 1689],
