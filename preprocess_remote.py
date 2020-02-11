@@ -39,13 +39,24 @@ def get_stations_coordinates(
     return stations_coords
 
 
+def normalize_images(
+    image : typing.ByteString
+):
+    """ 
+    :param image: image as an array
+    :return: an array that is normalized between 0 and 1 
+    """
+    image = (image - np.min(image)) / np.ptp(image)
+    return image
+
+
 def crop_images(
     dataframe_path: str,
     window_size: float
     ):
     """ 
     :param datafram_path: str pointing to the dataframe .pkl file
-    :param window_size : float defining the pixel range of the crop centered at a station
+    :param window_size : float defining the pixel range of the crop centered at a station. One pixel is 16km^2
     :return:
     """
     assert window_size < 42, f"window_size value of {window_size} is too big, please reduce it to 42 and lower"
@@ -60,11 +71,11 @@ def crop_images(
             x_coord = station_coordinates[1][0]
             y_coord = station_coordinates[1][1]
             with h5py.File(hdf5_path, "r") as h5_data:
-                ch1_data = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset)
-                ch2_data = utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset)
-                ch3_data = utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset)
-                ch4_data = utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset)
-                ch6_data = utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset)
+                ch1_data = normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset))
+                ch2_data = normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset))
+                ch3_data = normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset))
+                ch4_data = normalize_image(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset))
+                ch6_data = normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset))
 
                 ch1_crop = ch1_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
                 ch2_crop = ch2_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
