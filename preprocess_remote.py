@@ -38,9 +38,9 @@ def get_stations_coordinates(
         stations_coords[region] = coords
     return stations_coords
 
-
+# need to modify this so that the normalization takes the min, max of each channel and not each image
 def normalize_images(
-    image : typing.ByteString
+    image : np.ndarray
 ):
     """ 
     :param image: image as an array
@@ -48,6 +48,24 @@ def normalize_images(
     """
     image = (image - np.min(image)) / np.ptp(image)
     return image
+
+
+def generate_images(
+    cropped_image : np.ndarray,
+    station : str,
+    file_date : str,
+    offset : int
+):
+    """ 
+    :param cropped_image: array of a cropped station
+    :param station: string -> station that was cropped
+    :param file_day: str -> corresponding date of the file that is cropped
+    :param offset: the integer index (or offset) that corresponds to the position of the sample in the dataset
+    This function will save the cropped images as .h5 file in the format of cropped_filedate_station_offset.h5
+    """
+    with h5py.File(f"cropped_{file_date}" + "_" + f"{station}" + "_" + f"{offset}.hdf5" , "w") as f:
+        crop = f.create_dataset("images", data=cropped_image)
+        # can add other keys if needed
 
 
 def crop_images(
@@ -66,11 +84,17 @@ def crop_images(
     coordinates = get_stations_coordinates(dataframe_path, stations)
     for index, row in df_copy.iterrows():
         hdf5_path = row["hdf5_8bit_path"]
+        file_date = hdf5_path.split("/")[-1]
+        # date of the file
+        file_date = "_".join(file_date.split('.'))[:-3]
         hdf5_offset = row["hdf5_8bit_offset"]
         for station_coordinates in coordinates.items():
+            # retrieves station name and coordinates for each station
+            station_name = station_coordinates[0]
             x_coord = station_coordinates[1][0]
             y_coord = station_coordinates[1][1]
             with h5py.File(hdf5_path, "r") as h5_data:
+                # normalize arrays and crop the station for each channel
                 ch1_data = normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset))
                 ch2_data = normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset))
                 ch3_data = normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset))
@@ -83,4 +107,5 @@ def crop_images(
                 ch4_crop = ch4_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
                 ch6_crop = ch6_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
                 img_crop = np.stack((ch1_crop, ch2_crop, ch3_crop, ch4_crop, ch6_crop), axis=-1)
-                # save images and output new dataframe
+                # save the images as .h5 file, will need to specify path
+                generate_images(img_crop, station_name, file_date, hdf5_offset)
