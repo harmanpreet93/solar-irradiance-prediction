@@ -63,6 +63,7 @@ def generate_images(
     :param offset: the integer index (or offset) that corresponds to the position of the sample in the dataset
     This function will save the cropped images as .h5 file in the format of cropped_filedate_station_offset.h5
     """
+    # Can specify the path here at the beginning of the argument. Note that w stands for create file, truncate if exists
     with h5py.File(f"cropped_{file_date}" + "_" + f"{station}" + "_" + f"{offset}.hdf5" , "w") as f:
         crop = f.create_dataset("images", data=cropped_image)
         # can add other keys if needed
