@@ -31,9 +31,9 @@ def do_code_profiling(function):
             x = function(*args, **kwargs)
 
             profile.disable()
-            profile.dump_stats("log/profiling_results.cprof")
+            profile.dump_stats("log/profiling_results.prof")
             with open("log/profiling_results.txt", "w") as f:
-                ps = pstats.Stats("log/profiling_results.cprof", stream=f)
+                ps = pstats.Stats("log/profiling_results.prof", stream=f)
                 ps.sort_stats('cumulative')
                 ps.print_stats()
             return x

@@ -9,10 +9,12 @@ def get_logger():
     if not logger:
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
+        file_name = 'log/' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '.log'
+        line_format = "%(asctime)s %(levelname)s: %(filename)s:%(funcName)s():%(lineno)d - %(message)s"
         logging.basicConfig(
             level=logging.DEBUG,
-            format="%(asctime)s %(levelname)s: %(filename)s:%(funcName)s():%(lineno)d - %(message)s",
-            filename="log/{0}.log".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
+            format=line_format,
+            filename=file_name,
             filemode="w"
         )
         logger = logging.getLogger(__name__)

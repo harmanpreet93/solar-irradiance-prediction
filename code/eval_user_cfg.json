@@ -1,6 +1,6 @@
 {
   "model_file": "model/my_model.index",
-  "target_model":"clearsky_model",
+  "target_model":"truth_predictor_model",
 
   "batch_size":32,
   "learning_rate":0.001,
