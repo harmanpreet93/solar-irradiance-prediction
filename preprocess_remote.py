@@ -1,9 +1,9 @@
-import utils
 import numpy as np
 import pandas as pd
 import h5py
 import json
 import typing
+from code import utils
 
 from pathlib import Path
 
@@ -99,7 +99,7 @@ def crop_images(
                 ch1_data = normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset))
                 ch2_data = normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset))
                 ch3_data = normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset))
-                ch4_data = normalize_image(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset))
+                ch4_data = normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset))
                 ch6_data = normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset))
 
                 ch1_crop = ch1_data[x_coord - window_size:x_coord + window_size, y_coord-window_size:y_coord + window_size]
