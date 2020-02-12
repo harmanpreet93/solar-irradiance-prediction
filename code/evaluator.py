@@ -10,7 +10,7 @@ import tensorflow as tf
 import tqdm
 
 from data_loader import DataLoader
-from main_model import MainModel
+from training_loop import select_model
 
 
 def prepare_dataloader(
@@ -88,11 +88,14 @@ def prepare_model(
 
     # MODIFY BELOW
 
+    MainModel = select_model(config)
+
     model = MainModel(stations, target_time_offsets, config)
 
-    weights_file = config["model_file"]
-    assert os.path.exists(weights_file), "Model not trained!"
-    model.load_weights(weights_file)
+    if MainModel.TRAINING_REQUIRED:
+        weights_file = config["model_file"]
+        assert os.path.exists(weights_file), "Model not trained!"
+        model.load_weights(weights_file)
 
     # MODIFY ABOVE
 

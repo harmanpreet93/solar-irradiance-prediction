@@ -6,7 +6,6 @@ import typing
 import sys
 
 from data_loader import DataLoader
-from main_model import MainModel
 from model_logging import get_logger
 
 import pandas as pd
@@ -21,7 +20,31 @@ def compute_rmse(y_true, y_pred):
     return tf.sqrt(tf.reduce_mean((y_true - y_pred)**2))
 
 
+def do_code_profiling(function):
+    def wrapper(*args, **kwargs):
+        if args[-1]["code_profiling_enabled"]:
+            import cProfile
+            import pstats
+            profile = cProfile.Profile()
+            profile.enable()
+
+            x = function(*args, **kwargs)
+
+            profile.disable()
+            profile.dump_stats("log/profiling_results.cprof")
+            with open("log/profiling_results.txt", "w") as f:
+                ps = pstats.Stats("log/profiling_results.cprof", stream=f)
+                ps.sort_stats('cumulative')
+                ps.print_stats()
+            return x
+        else:
+            return function(*args, **kwargs)
+    return wrapper
+
+
+@do_code_profiling
 def train(
+        MainModel,
         tr_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
         val_stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
         tr_datetimes: typing.List[datetime.datetime],
@@ -29,7 +52,7 @@ def train(
         tr_time_offsets: typing.List[datetime.timedelta],
         val_time_offsets: typing.List[datetime.timedelta],
         dataframe: pd.DataFrame,
-        user_config: typing.Dict[typing.AnyStr, typing.Any],
+        user_config: typing.Dict[typing.AnyStr, typing.Any]
 ):
     """Trains and saves the model to file"""
     Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config)
@@ -121,12 +144,22 @@ def get_targets(dataframe, config):
     return datetimes, stations, time_offsets
 
 
+def select_model(user_config):
+    if user_config["target_model"] == "truth_predictor_model":
+        from truth_predictor_model import MainModel
+    elif user_config["target_model"] == "clearsky_model":
+        from clearsky_model import MainModel
+    else:
+        raise Exception("Unknown model")
+
+    return MainModel
+
+
 def main(
         train_config_path: typing.AnyStr,
         val_config_path: typing.AnyStr,
         user_config_path: typing.Optional[typing.AnyStr] = None,
 ) -> None:
-    """Extracts predictions from a user model/data loader combo and saves them to a CSV file."""
 
     user_config, train_config, val_config, dataframe = \
         load_files(user_config_path, train_config_path, val_config_path)
@@ -140,16 +173,20 @@ def main(
     val_datetimes, val_stations, val_time_offsets = \
         get_targets(dataframe, val_config)
 
-    train(
-        tr_stations,
-        val_stations,
-        tr_datetimes,
-        val_datetimes,
-        tr_time_offsets,
-        val_time_offsets,
-        dataframe,
-        user_config
-    )
+    MainModel = select_model(user_config)
+
+    if MainModel.TRAINING_REQUIRED:
+        train(
+            MainModel,
+            tr_stations,
+            val_stations,
+            tr_datetimes,
+            val_datetimes,
+            tr_time_offsets,
+            val_time_offsets,
+            dataframe,
+            user_config
+        )
 
 
 def parse_args():

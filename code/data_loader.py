@@ -66,9 +66,10 @@ class DataLoader():
         n_channels = 5
         image_size_m = self.config["image_size_m"]
         image_size_n = self.config["image_size_n"]
+        images_per_pred = self.config["images_per_prediction"]
         # TODO: Not implemented yet, generate random data instead
         image = tf.random.uniform(shape=(
-            len(batch_of_datetimes), image_size_m, image_size_n, n_channels
+            len(batch_of_datetimes), image_size_m, image_size_n, n_channels, images_per_pred
         ))
         return image
 
