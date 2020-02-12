@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 logger = None
 
@@ -11,7 +12,7 @@ def get_logger():
         logging.basicConfig(
             level=logging.DEBUG,
             format="%(asctime)s %(levelname)s: %(filename)s:%(funcName)s():%(lineno)d - %(message)s",
-            filename="log/logging.log",
+            filename="log/{0}.log".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")),
             filemode="w"
         )
         logger = logging.getLogger(__name__)

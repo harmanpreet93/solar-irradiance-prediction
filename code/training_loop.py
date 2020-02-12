@@ -3,6 +3,7 @@ import datetime
 import json
 import os
 import typing
+import sys
 
 from data_loader import DataLoader
 from main_model import MainModel
@@ -12,6 +13,8 @@ import pandas as pd
 import numpy as np
 import tensorflow as tf
 import tqdm
+
+logger = get_logger()
 
 
 def compute_rmse(y_true, y_pred):
@@ -38,8 +41,6 @@ def train(
     nb_validation_samples = len(val_datetimes)
 
     model = MainModel(tr_stations, tr_time_offsets, user_config)
-
-    logger = get_logger()
 
     # set hyper-parameters
     nb_epoch = user_config["nb_epoch"]
@@ -84,20 +85,16 @@ def train(
     model.save_weights("model/my_model", save_format="tf")
 
 
+def load_file(path, name):
+    assert os.path.isfile(path), f"invalid {name} config file: {path}"
+    with open(path, "r") as fd:
+        return json.load(fd)
+
+
 def load_files(user_config_path, train_config_path, val_config_path):
-    user_config = {}
-    if user_config_path:
-        assert os.path.isfile(user_config_path), f"invalid user config file: {user_config_path}"
-        with open(user_config_path, "r") as fd:
-            user_config = json.load(fd)
-
-    assert os.path.isfile(train_config_path), f"invalid training config file: {train_config_path}"
-    with open(train_config_path, "r") as fd:
-        train_config = json.load(fd)
-
-    assert os.path.isfile(val_config_path), f"invalid validation config file: {val_config_path}"
-    with open(val_config_path, "r") as fd:
-        val_config = json.load(fd)
+    user_config = load_file(user_config_path, "user")
+    train_config = load_file(train_config_path, "training")
+    val_config = load_file(val_config_path, "validation")
 
     dataframe_path = train_config["dataframe_path"]
     assert os.path.isfile(dataframe_path), f"invalid dataframe path: {dataframe_path}"
@@ -167,6 +164,7 @@ def parse_args():
 
 
 if __name__ == "__main__":
+    logger.info(str(sys.argv))
     args = parse_args()
     main(
         train_config_path=args.train_cfg_path,
