@@ -6,7 +6,7 @@ import typing
 import sys
 
 from data_loader import DataLoader
-from model_logging import get_logger
+from model_logging import get_logger, get_summary_writer
 
 import pandas as pd
 import numpy as np
@@ -14,10 +14,6 @@ import tensorflow as tf
 import tqdm
 
 logger = get_logger()
-
-
-def compute_rmse(y_true, y_pred):
-    return tf.sqrt(tf.reduce_mean((y_true - y_pred)**2))
 
 
 def do_code_profiling(function):
@@ -42,6 +38,28 @@ def do_code_profiling(function):
     return wrapper
 
 
+def mask_nighttime_predictions(y_pred, y_true, night_flag):
+    day_flag = 1.0 - night_flag
+    masked_y_pred = tf.multiply(y_pred, day_flag) + tf.multiply(y_true, night_flag)
+    return masked_y_pred
+
+
+def train_step(model, optimizer, loss_fn, x_train, y_train):
+    with tf.GradientTape() as tape:
+        y_pred = model(x_train, training=True)
+        y_pred = mask_nighttime_predictions(y_pred, y_train, x_train[3])
+        loss = loss_fn(y_train, y_pred)
+    gradient = tape.gradient(loss, model.trainable_variables)
+    optimizer.apply_gradients(zip(gradient, model.trainable_variables))
+    return loss, y_train, y_pred
+
+
+def test_step(model, loss_fn, x_test, y_test):
+    y_pred = model(x_test)
+    loss = loss_fn(y_test, y_pred)
+    return loss, y_test, y_pred
+
+
 @do_code_profiling
 def train(
         MainModel,
@@ -55,22 +73,16 @@ def train(
         user_config: typing.Dict[typing.AnyStr, typing.Any]
 ):
     """Trains and saves the model to file"""
+
+    # Import the training and validation data loaders, import the model
     Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config)
     Val_DL = DataLoader(dataframe, val_datetimes, val_stations, val_time_offsets, user_config)
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
-
-    nb_training_samples = len(tr_datetimes)
-    nb_validation_samples = len(val_datetimes)
-
     model = MainModel(tr_stations, tr_time_offsets, user_config)
 
-    # initialize log directories for tensorboard
-    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    train_log_dir = 'log/gradient_tape/' + current_time + '/train'
-    val_log_dir = 'log/gradient_tape/' + current_time + '/val'
-    train_summary_writer = tf.summary.create_file_writer(train_log_dir)
-    val_summary_writer = tf.summary.create_file_writer(val_log_dir)
+    # Set up tensorboard logging
+    train_summary_writer, test_summary_writer = get_summary_writer()
 
     # set hyper-parameters
     nb_epoch = user_config["nb_epoch"]
@@ -79,48 +91,62 @@ def train(
     # Optimizer: Adam - for decaying learning rate
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
-    # RMSE loss: as it is a regression problem
-    loss_fn = compute_rmse
+    # Objective/Loss function: MSE Loss
+    loss_fn = tf.keras.losses.MeanSquaredError()
+
+    # Metrics to track:
+    train_loss = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
+    test_loss = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
+    train_rmse = tf.keras.metrics.RootMeanSquaredError()
+    test_rmse = tf.keras.metrics.RootMeanSquaredError()
 
     # training starts here
-    # TODO: Add tensorboard logging
     with tqdm.tqdm("training", total=nb_epoch) as pbar:
         for epoch in range(nb_epoch):
 
             # Train the model using the training set for one epoch
-            cumulative_train_loss = 0.0
             for minibatch in train_data_loader:
-                with tf.GradientTape() as tape:
-                    predictions = model(minibatch[:-1], training=True)
-                    loss = loss_fn(y_true=minibatch[-1], y_pred=predictions)
-                gradient = tape.gradient(loss, model.trainable_variables)
-                optimizer.apply_gradients(zip(gradient, model.trainable_variables))
-                cumulative_train_loss += loss
-            cumulative_train_loss /= nb_training_samples
+                loss, y_train, y_pred = train_step(
+                    model,
+                    optimizer,
+                    loss_fn,
+                    x_train=minibatch[:-1],
+                    y_train=minibatch[-1]
+                )
+                train_loss(loss)
+                train_rmse(y_train, y_pred)
+
+            with train_summary_writer.as_default():
+                tf.summary.scalar('loss', train_loss.result(), step=epoch)
+                tf.summary.scalar('rmse', train_rmse.result(), step=epoch)
 
             # Evaluate model performance on the validation set after training for one epoch
-            cumulative_val_loss = 0.0
             for minibatch in val_data_loader:
-                predictions = model(minibatch[:-1])
-                cumulative_val_loss += loss_fn(y_true=minibatch[-1], y_pred=predictions)
-            cumulative_val_loss /= nb_validation_samples
+                loss, y_test, y_pred = test_step(
+                    model,
+                    loss_fn,
+                    x_test=minibatch[:-1],
+                    y_test=minibatch[-1]
+                )
+                test_loss(loss)
+                test_rmse(y_test, y_pred)
+
+            with test_summary_writer.as_default():
+                tf.summary.scalar('loss', test_loss.result(), step=epoch)
+                tf.summary.scalar('rmse', test_rmse.result(), step=epoch)
 
             logger.debug(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
-                .format(epoch + 1, nb_epoch, cumulative_train_loss.numpy(), cumulative_val_loss.numpy())
+                .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
             )
 
-            # write tensorboard logs
-            with train_summary_writer.as_default():
-                tf.summary.scalar('loss', cumulative_train_loss, step=epoch)
-                # tf.summary.scalar('accuracy', train_accuracy, step=epoch)
-
-            with val_summary_writer.as_default():
-                tf.summary.scalar('loss', cumulative_val_loss, step=epoch)
-                # tf.summary.scalar('accuracy', val_accuracy, step=epoch)
+            # Reset metrics every epoch
+            train_loss.reset_states()
+            train_rmse.reset_states()
+            test_loss.reset_states()
+            test_rmse.reset_states()
 
             pbar.update(1)
-
 
     # save model weights to file
     model.save_weights("model/my_model", save_format="tf")

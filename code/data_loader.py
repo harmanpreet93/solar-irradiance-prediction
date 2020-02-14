@@ -44,12 +44,13 @@ class DataLoader():
         self.output_seq_len = len(self.target_time_offsets)
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
-            output_types=(tf.float32, tf.float32, tf.float32, tf.float32)
+            output_types=(tf.float32, tf.float32, tf.float32, tf.float32, tf.float32)
         )
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
-        batch_of_clearsky_GHIs = np.zeros((len(batch_of_datetimes), self.output_seq_len))
-        batch_of_true_GHIs = np.zeros((len(batch_of_datetimes), self.output_seq_len))
+        batch_size = len(batch_of_datetimes)
+        batch_of_clearsky_GHIs = np.zeros((batch_size, self.output_seq_len))
+        batch_of_true_GHIs = np.zeros((batch_size, self.output_seq_len))
 
         for i, dt in enumerate(batch_of_datetimes):
             for j, time_offset in enumerate(self.target_time_offsets):
@@ -68,11 +69,17 @@ class DataLoader():
         image_size_m = self.config["image_size_m"]
         image_size_n = self.config["image_size_n"]
         images_per_pred = self.config["images_per_prediction"]
+        batch_size = len(batch_of_datetimes)
         # TODO: Not implemented yet, generate random data instead
-        image = tf.random.uniform(shape=(
-            len(batch_of_datetimes), image_size_m, image_size_n, images_per_pred, nb_channels
-        ))
+        image = tf.random.uniform(
+            shape=(batch_size, image_size_m, image_size_n, images_per_pred, nb_channels)
+        )
         return image
+
+    def get_nighttime_flags(self, batch_of_datetimes):
+        batch_size = len(batch_of_datetimes)
+        # TODO: Return real nighttime flags; assume no nighttime values for now
+        return np.zeros(shape=(batch_size, 4))
 
     def data_generator_fn(self):
         batch_size = self.config["batch_size"]
@@ -81,10 +88,11 @@ class DataLoader():
                 batch_of_datetimes = self.target_datetimes[i:(i + batch_size)]
                 true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, station_id)
                 images = self.get_image_data(batch_of_datetimes)
+                night_flags = self.get_nighttime_flags(batch_of_datetimes)
 
                 # Remember that you do not have access to the targets.
                 # Your dataloader should handle this accordingly.
-                yield images, clearsky_GHIs, true_GHIs, true_GHIs
+                yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
 
     def get_data_loader(self):
         '''

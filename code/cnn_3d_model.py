@@ -2,6 +2,7 @@ import typing
 import datetime
 from model_logging import get_logger
 import tensorflow as tf
+import numpy as np
 
 
 class MainModel(tf.keras.Model):
@@ -78,6 +79,9 @@ class MainModel(tf.keras.Model):
         images = inputs[0]
         # clearsky_GHIs = inputs[1]
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
+        # night_flags = inputs[3]
+
+        assert not np.isnan(images).any()
 
         x = self.conv3d_1(images)
         x = tf.squeeze(x)
@@ -88,5 +92,7 @@ class MainModel(tf.keras.Model):
         x = self.flatten(x)
         x = self.dense_6(x)
         y = self.dense_7(x)
+
+        assert not np.isnan(y).any()
 
         return y
