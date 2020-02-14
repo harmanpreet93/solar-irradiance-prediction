@@ -149,6 +149,8 @@ def select_model(user_config):
         from truth_predictor_model import MainModel
     elif user_config["target_model"] == "clearsky_model":
         from clearsky_model import MainModel
+    elif user_config["target_model"] == "3d_cnn_model":
+        from cnn_3d_model import MainModel
     else:
         raise Exception("Unknown model")
 
@@ -187,6 +189,8 @@ def main(
             dataframe,
             user_config
         )
+    else:
+        logger.warning("Model not trained; Model doesn't require training")
 
 
 def parse_args():
