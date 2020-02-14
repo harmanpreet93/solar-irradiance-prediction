@@ -43,7 +43,8 @@ class DataLoader():
         self.test_station = self.stations[0]
         self.output_seq_len = len(self.target_time_offsets)
         self.data_loader = tf.data.Dataset.from_generator(
-            self.data_generator_fn, output_types=(tf.float32, tf.float32, tf.float32, tf.float32)
+            self.data_generator_fn,
+            output_types=(tf.float32, tf.float32, tf.float32, tf.float32)
         )
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
@@ -63,13 +64,13 @@ class DataLoader():
         return batch_of_true_GHIs, batch_of_clearsky_GHIs
 
     def get_image_data(self, batch_of_datetimes):
-        n_channels = 5
+        nb_channels = self.config["nb_channels"]
         image_size_m = self.config["image_size_m"]
         image_size_n = self.config["image_size_n"]
         images_per_pred = self.config["images_per_prediction"]
         # TODO: Not implemented yet, generate random data instead
         image = tf.random.uniform(shape=(
-            len(batch_of_datetimes), image_size_m, image_size_n, n_channels, images_per_pred
+            len(batch_of_datetimes), image_size_m, image_size_n, images_per_pred, nb_channels
         ))
         return image
 
