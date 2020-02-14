@@ -78,8 +78,8 @@ class DataLoader():
 
     def get_nighttime_flags(self, batch_of_datetimes):
         batch_size = len(batch_of_datetimes)
-        # TODO: Return real nighttime flags, assume all flags are for daytime only for now
-        return np.zeros(shape=(batch_size, 4), dtype=int)
+        # TODO: Return real nighttime flags; assume no nighttime values for now
+        return np.zeros(shape=(batch_size, 4))
 
     def data_generator_fn(self):
         batch_size = self.config["batch_size"]

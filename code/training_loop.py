@@ -38,9 +38,16 @@ def do_code_profiling(function):
     return wrapper
 
 
+def mask_nighttime_predictions(y_pred, y_true, night_flag):
+    day_flag = 1.0 - night_flag
+    masked_y_pred = tf.multiply(y_pred, day_flag) + tf.multiply(y_true, night_flag)
+    return masked_y_pred
+
+
 def train_step(model, optimizer, loss_fn, x_train, y_train):
     with tf.GradientTape() as tape:
         y_pred = model(x_train, training=True)
+        y_pred = mask_nighttime_predictions(y_pred, y_train, x_train[3])
         loss = loss_fn(y_train, y_pred)
     gradient = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradient, model.trainable_variables))
