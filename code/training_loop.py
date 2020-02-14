@@ -106,7 +106,6 @@ def train(
                     x_train=minibatch[:-1],
                     y_train=minibatch[-1]
                 )
-                assert not np.isnan(loss).any()
                 train_loss(loss)
                 train_rmse(y_train, y_pred)
 
