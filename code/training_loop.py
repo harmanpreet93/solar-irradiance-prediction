@@ -65,6 +65,13 @@ def train(
 
     model = MainModel(tr_stations, tr_time_offsets, user_config)
 
+    # initialize log directories for tensorboard
+    current_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    train_log_dir = 'log/gradient_tape/' + current_time + '/train'
+    val_log_dir = 'log/gradient_tape/' + current_time + '/val'
+    train_summary_writer = tf.summary.create_file_writer(train_log_dir)
+    val_summary_writer = tf.summary.create_file_writer(val_log_dir)
+
     # set hyper-parameters
     nb_epoch = user_config["nb_epoch"]
     learning_rate = user_config["learning_rate"]
@@ -102,7 +109,18 @@ def train(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
                 .format(epoch + 1, nb_epoch, cumulative_train_loss.numpy(), cumulative_val_loss.numpy())
             )
+
+            # write tensorboard logs
+            with train_summary_writer.as_default():
+                tf.summary.scalar('loss', cumulative_train_loss, step=epoch)
+                # tf.summary.scalar('accuracy', train_accuracy, step=epoch)
+
+            with val_summary_writer.as_default():
+                tf.summary.scalar('loss', cumulative_val_loss, step=epoch)
+                # tf.summary.scalar('accuracy', val_accuracy, step=epoch)
+
             pbar.update(1)
+
 
     # save model weights to file
     model.save_weights("model/my_model", save_format="tf")
