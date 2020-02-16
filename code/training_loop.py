@@ -35,6 +35,7 @@ def do_code_profiling(function):
             return x
         else:
             return function(*args, **kwargs)
+
     return wrapper
 
 
@@ -137,7 +138,7 @@ def train(
 
             logger.debug(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
-                .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
+                    .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
             )
 
             # Reset metrics every epoch
@@ -206,7 +207,6 @@ def main(
         val_config_path: typing.AnyStr,
         user_config_path: typing.Optional[typing.AnyStr] = None,
 ) -> None:
-
     user_config, train_config, val_config, dataframe = \
         load_files(user_config_path, train_config_path, val_config_path)
 
