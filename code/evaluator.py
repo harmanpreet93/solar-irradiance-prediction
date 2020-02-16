@@ -10,7 +10,7 @@ import tensorflow as tf
 import tqdm
 
 from data_loader import DataLoader
-from training_loop import select_model
+from training_loop_launcher import select_model
 
 
 def prepare_dataloader(

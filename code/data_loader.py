@@ -44,7 +44,7 @@ class DataLoader():
         self.output_seq_len = len(self.target_time_offsets)
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
-            output_types=(tf.float32, tf.float32, tf.float32, tf.float32, tf.float32)
+            output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32)
         )
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
@@ -79,7 +79,7 @@ class DataLoader():
     def get_nighttime_flags(self, batch_of_datetimes):
         batch_size = len(batch_of_datetimes)
         # TODO: Return real nighttime flags; assume no nighttime values for now
-        return np.zeros(shape=(batch_size, 4))
+        return np.zeros(shape=(batch_size, 4), dtype=bool)
 
     def data_generator_fn(self):
         batch_size = self.config["batch_size"]

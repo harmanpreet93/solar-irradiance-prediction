@@ -30,3 +30,25 @@ def get_summary_writer():
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
     test_summary_writer = tf.summary.create_file_writer(test_log_dir)
     return train_summary_writer, test_summary_writer
+
+
+def do_code_profiling(function):
+    def wrapper(*args, **kwargs):
+        if args[-1]["code_profiling_enabled"]:
+            import cProfile
+            import pstats
+            profile = cProfile.Profile()
+            profile.enable()
+
+            x = function(*args, **kwargs)
+
+            profile.disable()
+            profile.dump_stats("log/profiling_results.prof")
+            with open("log/profiling_results.txt", "w") as f:
+                ps = pstats.Stats("log/profiling_results.prof", stream=f)
+                ps.sort_stats('cumulative')
+                ps.print_stats()
+            return x
+        else:
+            return function(*args, **kwargs)
+    return wrapper
