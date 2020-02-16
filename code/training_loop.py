@@ -7,6 +7,23 @@ from data_loader import DataLoader
 from model_logging import get_logger, get_summary_writer, do_code_profiling
 
 logger = get_logger()
+MAX_K_GHI = 1.2
+
+
+def k_to_true_ghi(k, clearsky_ghi):
+    # Clip too large and small k values
+    k = tf.minimum(k, MAX_K_GHI)
+    k = tf.maximum(k, 0.0)
+    true_ghi = tf.math.multiply_no_nan(k, clearsky_ghi)
+    return true_ghi
+
+
+def ghi_to_k(true_ghi, clearsky_ghi):
+    k = tf.math.divide_no_nan(true_ghi, clearsky_ghi)
+    # Clip too large and small k values
+    k = tf.minimum(k, MAX_K_GHI)
+    k = tf.maximum(k, 0.0)
+    return k
 
 
 def mask_nighttime_predictions(y_pred, y_true, night_flag):
@@ -18,17 +35,19 @@ def mask_nighttime_predictions(y_pred, y_true, night_flag):
 
 
 def train_step(model, optimizer, loss_fn, x_train, y_train):
+    k_train = ghi_to_k(true_ghi=y_train, clearsky_ghi=x_train[1])
     with tf.GradientTape() as tape:
-        y_pred = model(x_train, training=True)
-        y_pred, y_train, weight = mask_nighttime_predictions(y_pred, y_train, x_train[3])
-        loss = loss_fn(y_train, y_pred)
+        k_pred = model(x_train, predict_k=True, training=True)
+        y_pred = ghi_to_k(true_ghi=k_pred, clearsky_ghi=x_train[1])
+        k_pred, k_train, weight = mask_nighttime_predictions(k_pred, k_train, x_train[3])
+        loss = loss_fn(k_train, k_pred)
     gradient = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradient, model.trainable_variables))
     return loss, y_train, y_pred, weight
 
 
 def test_step(model, loss_fn, x_test, y_test):
-    y_pred = model(x_test)
+    y_pred = model(x_test, predict_k=False)
     y_pred, y_test, weight = mask_nighttime_predictions(y_pred, y_test, x_test[3])
     loss = loss_fn(y_test, y_pred)
     return loss, y_test, y_pred, weight

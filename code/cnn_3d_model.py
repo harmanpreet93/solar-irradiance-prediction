@@ -1,8 +1,9 @@
 import typing
 import datetime
-from model_logging import get_logger
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+from model_logging import get_logger
+from training_loop import k_to_true_ghi
 
 
 class MainModel(tf.keras.Model):
@@ -72,12 +73,12 @@ class MainModel(tf.keras.Model):
             activation=tf.nn.relu
         )
 
-    def call(self, inputs):
+    def call(self, inputs, predict_k=False):
         '''
         Defines the forward pass through our model
         '''
         images = inputs[0]
-        # clearsky_GHIs = inputs[1]
+        clearsky_GHIs = inputs[1]
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
         # night_flags = inputs[3]
 
@@ -94,5 +95,8 @@ class MainModel(tf.keras.Model):
         y = self.dense_7(x)
 
         assert not np.isnan(y).any()
+
+        if not predict_k:
+            y = k_to_true_ghi(y, clearsky_GHIs)
 
         return y
