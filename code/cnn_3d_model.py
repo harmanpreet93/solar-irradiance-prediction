@@ -36,13 +36,13 @@ class MainModel(tf.keras.Model):
         nb_channels = self.config["nb_channels"]
         image_size_m = self.config["image_size_m"]
         image_size_n = self.config["image_size_n"]
-        images_per_pred = self.config["images_per_prediction"]
+        input_seq_length = self.config["input_seq_length"]
 
         self.conv3d_1 = tf.keras.layers.Conv3D(
             filters=16,
-            kernel_size=(6, 6, images_per_pred),
-            input_shape=(image_size_m, image_size_n, images_per_pred, nb_channels),
-            strides=(2, 2, 1)
+            kernel_size=(input_seq_length, 6, 6),
+            input_shape=(input_seq_length, image_size_m, image_size_n, nb_channels),
+            strides=(1, 2, 2)
         )
         self.pool_2 = tf.keras.layers.MaxPool2D(
             pool_size=(2, 2),

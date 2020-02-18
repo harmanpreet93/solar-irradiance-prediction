@@ -9,7 +9,6 @@
   "image_size_n": 82,
   "image_offset_m": 0,
   "image_offset_n": 0,
-  "images_per_prediction": 2,
   "nb_channels": 5,
   "input_time_offsets": [
     "P0DT0H0M0S",
