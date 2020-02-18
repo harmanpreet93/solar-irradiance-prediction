@@ -116,6 +116,10 @@ def train(
                 )
                 train_loss(loss)
                 train_rmse(y_train, y_pred)
+                print("Loss: ",train_loss.result())
+                print("RMSE: ",train_rmse.result())
+                break
+            break
 
             with train_summary_writer.as_default():
                 tf.summary.scalar('loss', train_loss.result(), step=epoch)

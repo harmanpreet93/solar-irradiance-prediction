@@ -49,7 +49,7 @@ class DataLoader():
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
             output_types=(tf.float32, tf.float32, tf.float32, tf.float32, tf.float32)
-        ).cache().repeat().shuffle().batch(self.config["batch_size"]).prefetch(self.config["batch_size"])
+        ).batch(self.config["batch_size"]).prefetch(self.config["batch_size"]).repeat()
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
         batch_size = len(batch_of_datetimes)
@@ -118,12 +118,13 @@ class DataLoader():
         for index, timestamp in enumerate(timestamps_from_history):
             row = df.loc[timestamp]
             hdf5_path = row["hdf5_8bit_path"]
-            hdf5_path = '/project/cq-training-1/project1/data/hdf5v7_8bit/2015.01.01.0800.h5'
+            # hdf5_path = '/project/cq-training-1/project1/data/hdf5v7_8bit/2015.01.01.0800.h5'
             # file_date = hdf5_path.split("/")[-1][:-3]
             # date of the file
             # file_date = "_".join(file_date.split('.'))
             hdf5_offset = row["hdf5_8bit_offset"]
-            print("harman hdf5_path, offset ", hdf5_path, hdf5_offset)
+            # print("harman hdf5_path, offset ", hdf5_path, hdf5_offset)
+            # print("harman ncdf_path ", row["ncdf_path"])
 
             for station_coordinates in coordinates.items():
                 # retrieves station name and coordinates for each station
@@ -138,6 +139,10 @@ class DataLoader():
                     ch3_data = self.normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset))
                     ch4_data = self.normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset))
                     ch6_data = self.normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset))
+
+                    if ch1_data is None:
+                        # print("ch1 data is None: ", timestamp, ch1_data)
+                        return None
 
                     # print("ch1 data", ch1_data)
 
@@ -190,7 +195,7 @@ class DataLoader():
         # takes the first value for the hdf5 path
         # hdf5_path = df["hdf5_8bit_path"][2]
         hdf5_path = "/project/cq-training-1/project1/data/hdf5v7_8bit/2015.01.01.0800.h5"
-        print("**********************hdf5 path ", hdf5_path)
+        # print("**********************hdf5 path ", hdf5_path)
 
         with h5py.File(hdf5_path, 'r') as h5_data:
             print("h5_data file ", h5_data)
@@ -268,7 +273,12 @@ class DataLoader():
                 # get cropped images for given timestamp
                 # tensor of size (input_seq_length x C x W x H)
                 images = self.crop_images(station_df, timestamps_from_history, stations_coordinates,
-                                          window_size=self.config["image_size_m"] // 2)
+                                      window_size=self.config["image_size_m"] // 2)
+                if images is None:
+                    continue
+
+                print("Images size: ", images.shape)
+                print("GHIs ",true_GHIs, clearsky_GHIs)
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
 
