@@ -40,6 +40,7 @@ class DataLoader():
         self.target_time_offsets = target_time_offsets
         self.initialize()
 
+
     def initialize(self):
         self.logger = get_logger()
         self.logger.debug("Initialize start")
@@ -50,6 +51,7 @@ class DataLoader():
             self.data_generator_fn,
             output_types=(tf.float32, tf.float32, tf.float32, tf.float32, tf.float32)
         ).batch(self.config["batch_size"]).prefetch(self.config["batch_size"]).repeat()
+
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
         batch_size = len(batch_of_datetimes)
@@ -68,6 +70,7 @@ class DataLoader():
 
         return batch_of_true_GHIs, batch_of_clearsky_GHIs
 
+
     def get_image_data(self, batch_of_datetimes):
         nb_channels = self.config["nb_channels"]
         image_size_m = self.config["image_size_m"]
@@ -79,6 +82,7 @@ class DataLoader():
             shape=(batch_size, image_size_m, image_size_n, images_per_pred, nb_channels)
         )
         return image
+
 
     def get_nighttime_flags(self, batch_of_datetimes):
         batch_size = len(batch_of_datetimes)
@@ -98,8 +102,61 @@ class DataLoader():
     #             # Your dataloader should handle this accordingly.
     #             yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
 
-    def normalize_images(self, x):
-        return x
+    def channel_min_max(self):
+        """ 
+        :return: one list of max pixel value per channel and one list of min pixel value per channel (index 0 corresponds to channel 1 and so on)
+        """
+        large = [0] * 5
+        small = [0] * 5
+        largest = [0] * 5
+        smallest = [0] * 5
+        channels = ["ch1", "ch2", "ch3", "ch4", "ch6"]
+        main_dataframe_copy = self.dataframe.copy().replace(to_replace="nan",
+                                    value=np.NaN).dropna(subset=["hdf5_8bit_path"])
+        # need to iterate over the cleaned dataframe to read every file (it's quick since it's only reading the attribute and not opening the file)
+        for index, row in main_dataframe_copy.iterrows():
+            hdf5_path = row["hdf5_8bit_path"]
+            with h5py.File(hdf5_path, 'r') as h5_data:
+                for indx, channel in enumerate(channels):
+                    large[indx] = h5_data[channel].attrs.get("orig_max", None)
+                    small[indx] = h5_data[channel].attrs.get("orig_min", None)
+                    if large[indx] is None:
+                        return None
+                    if small[indx] is None:
+                        return None
+                for idx, item in enumerate(large):
+                    if large[idx] > largest[idx]:
+                        largest[idx] = large[idx]
+                    if small[idx] < smallest[idx]:
+                        smallest[idx] = small[idx]
+
+        return smallest, largest
+    
+
+    def normalize_images(
+        self,
+        image: np.ndarray,
+        channel: str,
+        largest: list,
+        smallest: list
+    ):
+        """ 
+        :param image: image as an array
+        :param channel: str indicating the channel of the image
+        :param largest: list of the largest pixel value for each channel, each index corresponds to one channel
+        :param smallest: list of the smallest pixel value for each channel, each index corresponds to one channel
+        :return: min-max normalized image according to the min-max value of its channel
+        """
+        channels = ["ch1", "ch2", "ch3", "ch4", "ch6"]
+        if channel not in channels:
+            raise ValueError("channel is not a valid argument")
+        else:
+            for idx, value  in enumerate(channels):
+                if channel == channels[idx]:
+                    image = (image - smallest[idx]) / (largest[idx] - smallest[idx])
+
+        return image
+
 
     def crop_images(self,
                     df: pd.DataFrame,
@@ -114,6 +171,7 @@ class DataLoader():
         image_crops = np.zeros(shape=(
             len(timestamps_from_history), window_size * 2, window_size * 2, n_channels
         ))
+        smallest, largest = channel_min_max()
 
         for index, timestamp in enumerate(timestamps_from_history):
             row = df.loc[timestamp]
@@ -134,11 +192,11 @@ class DataLoader():
 
                 with h5py.File(hdf5_path, "r") as h5_data:
                     # normalize arrays and crop the station for each channel
-                    ch1_data = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset)
-                    ch2_data = self.normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset))
-                    ch3_data = self.normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset))
-                    ch4_data = self.normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset))
-                    ch6_data = self.normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset))
+                    ch1_data = normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset), "ch1", largest, smallest)
+                    ch2_data = normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset), "ch2", largest, smallest)
+                    ch3_data = normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset), "ch3", largest, smallest)
+                    ch4_data = normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset), "ch4", largest, smallest)
+                    ch6_data = normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset), "ch6", largest, smallest)
 
                     if ch1_data is None:
                         # print("ch1 data is None: ", timestamp, ch1_data)
@@ -163,6 +221,7 @@ class DataLoader():
 
         return image_crops
 
+
     def get_TrueGHIs(self, timestamp, station_id):
         trueGHIs = [0] * 4
         GHI_col = station_id + "_GHI"
@@ -173,6 +232,7 @@ class DataLoader():
 
         return trueGHIs
 
+
     def get_ClearSkyGHIs(self, timestamp, station_id):
         clearSkyGHIs = [0] * 4
         clearSkyGHI_col = station_id + "_CLEARSKY_GHI"
@@ -182,6 +242,7 @@ class DataLoader():
         clearSkyGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][clearSkyGHI_col]
 
         return clearSkyGHIs
+
 
     def get_stations_coordinates(self,
                                  df: pd.DataFrame
@@ -208,6 +269,7 @@ class DataLoader():
             stations_coords[region] = coords
 
         return stations_coords
+
 
     def preprocess_and_filter_data(self, main_df):
 
@@ -241,6 +303,7 @@ class DataLoader():
         }
 
         return stations_df
+
 
     def data_generator_fn(self):
         main_dataframe_copy = self.dataframe.copy()
@@ -281,6 +344,7 @@ class DataLoader():
                 print("GHIs ",true_GHIs, clearsky_GHIs)
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
+
 
     def get_data_loader(self):
         '''
