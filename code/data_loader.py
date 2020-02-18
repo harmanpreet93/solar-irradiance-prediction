@@ -104,7 +104,8 @@ class DataLoader():
 
     def channel_min_max(self):
         """ 
-        :return: one list of max pixel value per channel and one list of min pixel value per channel (index 0 corresponds to channel 1 and so on)
+        :return: one list of max pixel value per channel and 
+        one list of min pixel value per channel (index 0 corresponds to channel 1 and so on)
         """
         large = [0] * 5
         small = [0] * 5
@@ -113,7 +114,8 @@ class DataLoader():
         channels = ["ch1", "ch2", "ch3", "ch4", "ch6"]
         main_dataframe_copy = self.dataframe.copy().replace(to_replace="nan",
                                     value=np.NaN).dropna(subset=["hdf5_8bit_path"])
-        # need to iterate over the cleaned dataframe to read every file (it's quick since it's only reading the attribute and not opening the file)
+        # need to iterate over the cleaned dataframe to read every file 
+        # (it's quick since it's only reading the attribute and not opening the file)
         for index, row in main_dataframe_copy.iterrows():
             hdf5_path = row["hdf5_8bit_path"]
             with h5py.File(hdf5_path, 'r') as h5_data:
@@ -171,7 +173,7 @@ class DataLoader():
         image_crops = np.zeros(shape=(
             len(timestamps_from_history), window_size * 2, window_size * 2, n_channels
         ))
-        smallest, largest = channel_min_max()
+        smallest, largest = self.channel_min_max()
 
         for index, timestamp in enumerate(timestamps_from_history):
             row = df.loc[timestamp]
@@ -192,11 +194,11 @@ class DataLoader():
 
                 with h5py.File(hdf5_path, "r") as h5_data:
                     # normalize arrays and crop the station for each channel
-                    ch1_data = normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset), "ch1", largest, smallest)
-                    ch2_data = normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset), "ch2", largest, smallest)
-                    ch3_data = normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset), "ch3", largest, smallest)
-                    ch4_data = normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset), "ch4", largest, smallest)
-                    ch6_data = normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset), "ch6", largest, smallest)
+                    ch1_data = self.normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset), "ch1", largest, smallest)
+                    ch2_data = self.normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset), "ch2", largest, smallest)
+                    ch3_data = self.normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset), "ch3", largest, smallest)
+                    ch4_data = self.normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset), "ch4", largest, smallest)
+                    ch6_data = self.normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset), "ch6", largest, smallest)
 
                     if ch1_data is None:
                         # print("ch1 data is None: ", timestamp, ch1_data)
