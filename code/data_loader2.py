@@ -169,7 +169,7 @@ class DataLoader():
         image_crops = np.zeros(shape=(
             len(timestamps_from_history), window_size * 2, window_size * 2, n_channels
         ))
-        smallest, largest = channel_min_max()
+        smallest, largest = self.channel_min_max()
 
         for index, timestamp in enumerate(timestamps_from_history):
             row = df.loc[timestamp]
@@ -196,11 +196,11 @@ class DataLoader():
                     print("ch1_data.shape=", ch1_data.shape)
                 else:
                     print("no missing img")
-                    ch1_data = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset)
-                    ch2_data = utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset)
-                    ch3_data = utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset)
-                    ch4_data = utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset)
-                    ch6_data = utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset)
+                    ch1_data = self.normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset), "ch1", largest, smallest)
+                    ch2_data = self.normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset), "ch2", largest, smallest)
+                    ch3_data = self.normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset), "ch3", largest, smallest)
+                    ch4_data = self.normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset), "ch4", largest, smallest)
+                    ch6_data = self.normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset), "ch6", largest, smallest)
 
                 # ML: We don't need this loop as we loop already over stations
                 # for station_coordinates in coordinates.items():
