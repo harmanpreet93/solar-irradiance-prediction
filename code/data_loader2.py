@@ -41,7 +41,6 @@ class DataLoader():
         self.target_time_offsets = target_time_offsets
         self.initialize()
 
-
     def initialize(self):
         self.logger = get_logger()
         self.logger.debug("Initialize start")
@@ -52,7 +51,6 @@ class DataLoader():
             self.data_generator_fn,
             output_types=(tf.float32, tf.float32, tf.float32, tf.float32, tf.float32)
         ).batch(self.config["batch_size"]).prefetch(self.config["batch_size"]).repeat()
-
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
         batch_size = len(batch_of_datetimes)
@@ -71,7 +69,6 @@ class DataLoader():
 
         return batch_of_true_GHIs, batch_of_clearsky_GHIs
 
-
     def get_image_data(self, batch_of_datetimes):
         nb_channels = self.config["nb_channels"]
         image_size_m = self.config["image_size_m"]
@@ -83,7 +80,6 @@ class DataLoader():
             shape=(batch_size, image_size_m, image_size_n, images_per_pred, nb_channels)
         )
         return image
-
 
     def get_nighttime_flags(self, batch_of_datetimes):
         batch_size = len(batch_of_datetimes)
@@ -104,8 +100,9 @@ class DataLoader():
     #             yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
 
     def channel_min_max(self):
-        """ 
-        :return: one list of max pixel value per channel and one list of min pixel value per channel (index 0 corresponds to channel 1 and so on)
+        """
+        :return: one list of max pixel value per channel and one list of min pixel value
+        per channel (index 0 corresponds to channel 1 and so on)
         """
         large = [0] * 5
         small = [0] * 5
@@ -113,8 +110,9 @@ class DataLoader():
         smallest = [0] * 5
         channels = ["ch1", "ch2", "ch3", "ch4", "ch6"]
         main_dataframe_copy = self.dataframe.copy().replace(to_replace="nan",
-                                    value=np.NaN).dropna(subset=["hdf5_8bit_path"])
-        # need to iterate over the cleaned dataframe to read every file (it's quick since it's only reading the attribute and not opening the file)
+                                                            value=np.NaN).dropna(subset=["hdf5_8bit_path"])
+        # need to iterate over the cleaned dataframe to read every file
+        # (it's quick since it's only reading the attribute and not opening the file)
         for index, row in main_dataframe_copy.iterrows():
             hdf5_path = row["hdf5_8bit_path"]
             with h5py.File(hdf5_path, 'r') as h5_data:
@@ -132,7 +130,6 @@ class DataLoader():
                         smallest[idx] = small[idx]
 
         return smallest, largest
-    
 
     def normalize_images(
         self,
@@ -141,7 +138,7 @@ class DataLoader():
         largest: list,
         smallest: list
     ):
-        """ 
+        """
         :param image: image as an array
         :param channel: str indicating the channel of the image
         :param largest: list of the largest pixel value for each channel, each index corresponds to one channel
@@ -152,12 +149,11 @@ class DataLoader():
         if channel not in channels:
             raise ValueError("channel is not a valid argument")
         else:
-            for idx, value  in enumerate(channels):
+            for idx, value in enumerate(channels):
                 if channel == channels[idx]:
                     image = (image - smallest[idx]) / (largest[idx] - smallest[idx])
 
         return image
-
 
     def crop_images(self,
                     df: pd.DataFrame,
@@ -193,9 +189,9 @@ class DataLoader():
                     print("/!\\ ===== missing image at ===== /!\\", hdf5_offset)
                     # take offset -1 and offset + 1
                     prev_img = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset - 1)
-                    #print("prev_img.shape=", prev_img.shape)
+                    # print("prev_img.shape=", prev_img.shape)
                     next_img = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset + 1)
-                    #print("next_img.shape=", next_img.shape)
+                    # print("next_img.shape=", next_img.shape)
                     ch1_data = handle_missing_img2(prev_img, next_img).reshape(prev_img.shape)
                     print("ch1_data.shape=", ch1_data.shape)
                 else:
@@ -235,7 +231,6 @@ class DataLoader():
 
         return image_crops
 
-
     def get_TrueGHIs(self, timestamp, station_id):
         trueGHIs = [0] * 4
         GHI_col = station_id + "_GHI"
@@ -245,7 +240,6 @@ class DataLoader():
         trueGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][GHI_col]  # T6_GHI
 
         return trueGHIs
-
 
     def get_ClearSkyGHIs(self, timestamp, station_id):
         clearSkyGHIs = [0] * 4
@@ -262,7 +256,6 @@ class DataLoader():
     def get_stations_coordinates(self,
                                  df: pd.DataFrame
                                  ) -> typing.Dict[str, typing.Tuple]:
-
         """
         :param datafram_path: str pointing to the dataframe .pkl file
         :param stations_lats_lons: dictionary of str -> (latitude, longitude) of the station(s)
@@ -286,7 +279,6 @@ class DataLoader():
             stations_coords[region] = coords
 
         return stations_coords
-
 
     def preprocess_and_filter_data(self, main_df):
 
@@ -353,7 +345,8 @@ class DataLoader():
                 timestamps_from_history = []
                 for i in range(self.config["input_seq_length"]):
                     timestamps_from_history.append(time_index - self.input_time_offsets[i])
-            print("data_generator_fn.timestamps_from_history=", timestamps_from_history)
+
+                print("data_generator_fn.timestamps_from_history=", timestamps_from_history)
 
                 true_GHIs = self.get_TrueGHIs(time_index, station_id)
                 clearsky_GHIs = self.get_ClearSkyGHIs(time_index, station_id)
@@ -361,17 +354,16 @@ class DataLoader():
 
                 # get cropped images for given timestamp
                 # tensor of size (input_seq_length x C x W x H)
-            print("station id coords are: ", stations_coordinates)
+                print("station id coords are: ", stations_coordinates)
                 images = self.crop_images(station_df, timestamps_from_history, stations_coordinates,
-                                      window_size=self.config["image_size_m"] // 2)
-                if images is None:
-                    continue
+                                          window_size=self.config["image_size_m"] // 2)
+                # if images is None:
+                #    continue
 
                 print("Images size: ", images.shape)
-                print("GHIs ",true_GHIs, clearsky_GHIs)
+                print("GHIs ", true_GHIs, clearsky_GHIs)
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
-
 
     def get_data_loader(self):
         '''
