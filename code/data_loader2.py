@@ -315,7 +315,7 @@ class DataLoader():
         hdf5_path = "data/hdf5v7_8bit_Jan_2015/2015.01.01.0800.h5"
         # ML: We don't need to use h5 file to get the coords,
         # we can assume they don't change and then store them as config params
-        print("**********************hdf5 path ", hdf5_path)
+        #print("**********************hdf5 path ", hdf5_path)
 
         with h5py.File(hdf5_path, 'r') as h5_data:
             print("h5_data file ", h5_data)
@@ -373,13 +373,14 @@ class DataLoader():
         station_wise_dataframes = self.preprocess_and_filter_data(main_dataframe_copy,self.target_datetimes)
 
         print("List of stations:",self.stations)
-
+        
         # ML: We shoud review this loop cause the crop method is also iterating over station,
         # we should pass station id as input to crop
         for station_id in self.stations:
             print("====== Processing station :", station_id)
             station_df = station_wise_dataframes[station_id]
             DAYTIME = np.str(station_id + '_DAYTIME')
+            print("How many timestamps of stations:",len(station_df))
 
             # get station coordinates, need to be called only once
             # ML: get only the coords of the current station_id
@@ -400,12 +401,12 @@ class DataLoader():
                 #for i in range(self.config["input_seq_length"]):
                     #timestamps_from_history.append(time_index - self.input_time_offsets[i])
             
-                print("Get true GHI values ...")
+                #print("Get true GHI values ...")
 
                 true_GHIs = self.get_TrueGHIs(time_index, station_id)
                 clearsky_GHIs = self.get_ClearSkyGHIs(time_index, station_id)
                 night_flags = np.zeros(4)
-                print("... DONE")
+                #print("... DONE")
 
                 # get cropped images for given timestamp
                 # tensor of size (input_seq_length x C x W x H)
@@ -413,14 +414,14 @@ class DataLoader():
                 print("Start retreiving and croping the images ... ")
                 images = self.crop_images(station_df, time_index, stations_coordinates,
                                       window_size=self.config["image_size_m"] // 2)
-                print("... DONE")
+                #print("... DONE")
                 if images is None:
                     continue
 
                 #print("Images size: ", images.shape)
-                print("GHIs ",true_GHIs, clearsky_GHIs)
+                # print("GHIs ",true_GHIs, clearsky_GHIs)
 
-                return images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
+            return images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
 
 
     def get_data_loader(self):
