@@ -12,9 +12,6 @@ def clean_df(df):
     df.replace(to_replace="nan", value=np.NaN, inplace=True)
 
 
-image_type = "hdf5_8bit"
-
-
 def get_datetimes_from_df(df, station_id):
     daytime = df[station_id + "_DAYTIME"] == 1.0
     valid_ghi = ~df[station_id + "_GHI"].isna()
@@ -64,17 +61,17 @@ def check_if_data_available(df, candidate_datetimes):
 
     for datetime in candidate_datetimes:
         # For each retained datetime Lookup in the dataframe which file to check.
-        # target_datetime = df.loc[datetime, ["hdf5_8bit_path", "hdf5_8bit_offset"]]
+        target_datetime = df.loc[datetime, ["hdf5_8bit_path", "hdf5_8bit_offset"]]
 
-        # hdf5_path = target_datetime["hdf5_8bit_path"]
-        # hdf5_offset = target_datetime["hdf5_8bit_offset"]
+        hdf5_path = target_datetime["hdf5_8bit_path"]
+        hdf5_offset = target_datetime["hdf5_8bit_offset"]
 
         # # Temporary local implementation for df lookup; uses Jan 2015
         # hdf5_path = "data/hdf5v7_8bit_Jan_2015/2015.01.01.0800.h5"
 
-        # data_ok = check_datetime_data_ok(hdf5_path, hdf5_offset)
-        # if data_ok:
-        datetimes += [datetime]
+        data_ok = check_datetime_data_ok(hdf5_path, hdf5_offset)
+        if data_ok:
+            datetimes += [datetime]
 
     return datetimes
 
@@ -158,16 +155,18 @@ def main(
 
     df = load_df(user_config)
     clean_df(df)
-    station_id = "BND"
-    candidate_datetimes = get_datetimes_from_df(df, station_id)
 
-    datetime_availability_df = check_if_data_available(df, candidate_datetimes)
+    for station_id in ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]:
 
-    processed_datetimes = get_datetimes_with_past_im_avail(datetime_availability_df)
+        candidate_datetimes = get_datetimes_from_df(df, station_id)
 
-    train_datetimes, val_datetimes = clip_datetimes(user_config, processed_datetimes)
+        datetime_availability_df = check_if_data_available(df, candidate_datetimes)
 
-    write_datetimes_to_json_cfg_file(train_datetimes, val_datetimes, user_config, station_id)
+        processed_datetimes = get_datetimes_with_past_im_avail(datetime_availability_df)
+
+        train_datetimes, val_datetimes = clip_datetimes(user_config, processed_datetimes)
+
+        write_datetimes_to_json_cfg_file(train_datetimes, val_datetimes, user_config, station_id)
 
 
 def parse_args():
