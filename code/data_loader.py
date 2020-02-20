@@ -44,7 +44,7 @@ class DataLoader():
         self.output_seq_len = len(self.target_time_offsets)
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
-            output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32)
+            output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32, tf.float32)
         )
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
@@ -81,6 +81,13 @@ class DataLoader():
         # TODO: Return real nighttime flags; assume no nighttime values for now
         return np.zeros(shape=(batch_size, 4), dtype=bool)
 
+    def get_onehot_station_id(self, batch_size):
+        # TODO: Return onehot-encoded station ids
+        stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
+        station_ids = np.zeros(shape=(batch_size, len(stations)))
+        station_ids[:, -1] = 1.0
+        return station_ids
+
     def data_generator_fn(self):
         batch_size = self.config["batch_size"]
         for station_id in self.stations:
@@ -89,10 +96,11 @@ class DataLoader():
                 true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, station_id)
                 images = self.get_image_data(batch_of_datetimes)
                 night_flags = self.get_nighttime_flags(batch_of_datetimes)
+                station_id_onehot = self.get_onehot_station_id(batch_size)
 
                 # Remember that you do not have access to the targets.
                 # Your dataloader should handle this accordingly.
-                yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
+                yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, true_GHIs
 
     def get_data_loader(self):
         '''

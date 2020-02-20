@@ -80,6 +80,7 @@ class MainModel(tf.keras.Model):
         # clearsky_GHIs = inputs[1]
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
         # night_flags = inputs[3]
+        # station_id_onehot = inputs[4]
 
         assert not np.isnan(images).any()
 
