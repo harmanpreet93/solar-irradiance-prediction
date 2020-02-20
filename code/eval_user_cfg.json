@@ -16,7 +16,6 @@
   "code_profiling_enabled":true,
 
   "dataframe_path": "data/catalog.helios.public.20100101-20160101.pkl",
-  "station_id":"BND",
   "start_bound_train": "2010-01-01",
   "end_bound_train": "2015-01-01",
   "start_bound_val": "2015-01-01",
