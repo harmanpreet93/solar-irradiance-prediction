@@ -81,8 +81,9 @@ class DataLoader():
         # TODO: Return real nighttime flags; assume no nighttime values for now
         return np.zeros(shape=(batch_size, 4), dtype=bool)
 
-    def get_onehot_station_id(self, batch_size):
+    def get_onehot_station_id(self, batch_of_datetimes):
         # TODO: Return onehot-encoded station ids
+        batch_size = len(batch_of_datetimes)
         stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
         station_ids = np.zeros(shape=(batch_size, len(stations)))
         station_ids[:, -1] = 1.0
@@ -96,7 +97,7 @@ class DataLoader():
                 true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, station_id)
                 images = self.get_image_data(batch_of_datetimes)
                 night_flags = self.get_nighttime_flags(batch_of_datetimes)
-                station_id_onehot = self.get_onehot_station_id(batch_size)
+                station_id_onehot = self.get_onehot_station_id(batch_of_datetimes)
 
                 # Remember that you do not have access to the targets.
                 # Your dataloader should handle this accordingly.

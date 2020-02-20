@@ -61,12 +61,11 @@ class MainModel(tf.keras.Model):
             pool_size=(2, 2),
             strides=(2, 2)
         )
-        self.conv2d_5 = tf.keras.layers.Conv2D(
-            filters=256,
-            kernel_size=(4, 4),
-            strides=(1, 1)
-        )  # Note: this acts as a fully-connected network (input and kernel are same dim)
         self.flatten = tf.keras.layers.Flatten()
+        self.dense_5 = tf.keras.layers.Dense(
+            256,
+            activation=tf.nn.relu
+        )
         self.dense_6 = tf.keras.layers.Dense(
             256,
             activation=tf.nn.relu
@@ -85,7 +84,7 @@ class MainModel(tf.keras.Model):
         clearsky_GHIs = inputs[1]
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
         # night_flags = inputs[3]
-        # station_id_onehot = inputs[4]
+        station_id_onehot = inputs[4]
 
         assert not np.isnan(images).any()
 
@@ -94,8 +93,10 @@ class MainModel(tf.keras.Model):
         x = self.pool_2(x)  # 1 px lost here; TODO: consider padding the tensor in future
         x = self.conv2d_3(x)
         x = self.pool_4(x)
-        x = self.conv2d_5(x)
         x = self.flatten(x)
+
+        x = tf.concat((x, station_id_onehot), axis=1)
+        x = self.dense_5(x)
         x = self.dense_6(x)
         k = self.dense_7(x)
 
