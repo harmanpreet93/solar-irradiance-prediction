@@ -116,14 +116,13 @@ def train(
                 )
                 train_loss(loss)
                 train_rmse(y_train, y_pred)
-                print("Loss: ",train_loss.result())
-                print("RMSE: ",train_rmse.result())
-                break
-            break
+
+                print("Train Loss: {}".format(train_loss.result()))
 
             with train_summary_writer.as_default():
                 tf.summary.scalar('loss', train_loss.result(), step=epoch)
                 tf.summary.scalar('rmse', train_rmse.result(), step=epoch)
+
 
             # Evaluate model performance on the validation set after training for one epoch
             for minibatch in val_data_loader:
@@ -135,6 +134,9 @@ def train(
                 )
                 test_loss(loss)
                 test_rmse(y_test, y_pred)
+
+            print("Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}".format(epoch + 1, nb_epoch, train_loss.result(),
+                                                                           test_loss.result()))
 
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=epoch)
@@ -185,7 +187,9 @@ def clip_dataframe(dataframe, train_config):
 
 def get_targets(dataframe, config):
     datetimes = [datetime.datetime.fromisoformat(d) for d in config["target_datetimes"]]
-    assert datetimes and all([d in dataframe.index for d in datetimes])
+
+    # TODO: commenting it while training
+    # assert datetimes and all([d in dataframe.index for d in datetimes])
 
     stations = config["stations"]
     time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in config["target_time_offsets"]]
@@ -217,7 +221,7 @@ def main(
     dataframe = \
         clip_dataframe(dataframe, train_config)
 
-    tr_datetimes, tr_stations, tr_time_offsets = \
+    train_datetimes, train_stations, train_time_offsets = \
         get_targets(dataframe, train_config)
 
     val_datetimes, val_stations, val_time_offsets = \
@@ -228,11 +232,11 @@ def main(
     if MainModel.TRAINING_REQUIRED:
         train(
             MainModel,
-            tr_stations,
+            train_stations,
             val_stations,
-            tr_datetimes,
+            train_datetimes,
             val_datetimes,
-            tr_time_offsets,
+            train_time_offsets,
             val_time_offsets,
             dataframe,
             user_config

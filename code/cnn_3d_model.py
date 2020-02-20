@@ -84,7 +84,6 @@ class MainModel(tf.keras.Model):
         assert not np.isnan(images).any()
 
         x = self.conv3d_1(images)
-        print("harmam: ",x.shape)
         x = tf.squeeze(x)
         x = self.pool_2(x)  # 1 px lost here; TODO: consider padding the tensor in future
         x = self.conv2d_3(x)

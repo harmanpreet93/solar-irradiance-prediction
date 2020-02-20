@@ -9,6 +9,12 @@ import h5py
 import utils
 
 
+def get_nighttime_flags(batch_of_datetimes):
+    batch_size = len(batch_of_datetimes)
+    # TODO: Return real nighttime flags; assume no nighttime values for now
+    return np.zeros(shape=(batch_size, 4))
+
+
 class DataLoader():
 
     def __init__(
@@ -49,7 +55,7 @@ class DataLoader():
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
             output_types=(tf.float32, tf.float32, tf.float32, tf.float32, tf.float32)
-        ).batch(self.config["batch_size"]).prefetch(self.config["batch_size"]).repeat()
+        ).batch(self.config["batch_size"]).prefetch(self.config["batch_size"])
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
         batch_size = len(batch_of_datetimes)
@@ -79,11 +85,6 @@ class DataLoader():
             shape=(batch_size, image_size_m, image_size_n, images_per_pred, nb_channels)
         )
         return image
-
-    def get_nighttime_flags(self, batch_of_datetimes):
-        batch_size = len(batch_of_datetimes)
-        # TODO: Return real nighttime flags; assume no nighttime values for now
-        return np.zeros(shape=(batch_size, 4))
 
     # def data_generator_fn(self):
     #     batch_size = self.config["batch_size"]
@@ -116,14 +117,20 @@ class DataLoader():
         ))
 
         for index, timestamp in enumerate(timestamps_from_history):
-            row = df.loc[timestamp]
+            # print("Timestamp: {}".format(timestamp))
+            try:
+                row = df.loc[timestamp]
+            except:
+                print("Timestamp {} not found, do something!".format(timestamp))
+                print("Not considering this sequence while training")
+                return None
+
             hdf5_path = row["hdf5_8bit_path"]
             # hdf5_path = '/project/cq-training-1/project1/data/hdf5v7_8bit/2015.01.01.0800.h5'
             # file_date = hdf5_path.split("/")[-1][:-3]
             # date of the file
             # file_date = "_".join(file_date.split('.'))
             hdf5_offset = row["hdf5_8bit_offset"]
-            # print("harman hdf5_path, offset ", hdf5_path, hdf5_offset)
             # print("harman ncdf_path ", row["ncdf_path"])
 
             for station_coordinates in coordinates.items():
@@ -140,11 +147,8 @@ class DataLoader():
                     ch4_data = self.normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset))
                     ch6_data = self.normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset))
 
-                    if ch1_data is None:
-                        # print("ch1 data is None: ", timestamp, ch1_data)
+                    if ch1_data is None or ch2_data is None or ch3_data is None or ch4_data is None or ch6_data is None:
                         return None
-
-                    # print("ch1 data", ch1_data)
 
                     ch1_crop = ch1_data[x_coord - window_size:x_coord + window_size,
                                y_coord - window_size:y_coord + window_size]
@@ -166,20 +170,28 @@ class DataLoader():
     def get_TrueGHIs(self, timestamp, station_id):
         trueGHIs = [0] * 4
         GHI_col = station_id + "_GHI"
-        trueGHIs[0] = self.dataframe.loc[timestamp][GHI_col]  # T0_GHI
-        trueGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][GHI_col]  # T1_GHI
-        trueGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][GHI_col]  # T3_GHI
-        trueGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][GHI_col]  # T6_GHI
+        # if timestamp missing
+        try:
+            trueGHIs[0] = self.dataframe.loc[timestamp][GHI_col]  # T0_GHI
+            trueGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][GHI_col]  # T1_GHI
+            trueGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][GHI_col]  # T3_GHI
+            trueGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][GHI_col]  # T6_GHI
+        except:
+            return None
 
         return trueGHIs
 
     def get_ClearSkyGHIs(self, timestamp, station_id):
         clearSkyGHIs = [0] * 4
         clearSkyGHI_col = station_id + "_CLEARSKY_GHI"
-        clearSkyGHIs[0] = self.dataframe.loc[timestamp][clearSkyGHI_col]
-        clearSkyGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][clearSkyGHI_col]
-        clearSkyGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][clearSkyGHI_col]
-        clearSkyGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][clearSkyGHI_col]
+        # if timestamp missing
+        try:
+            clearSkyGHIs[0] = self.dataframe.loc[timestamp][clearSkyGHI_col]
+            clearSkyGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][clearSkyGHI_col]
+            clearSkyGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][clearSkyGHI_col]
+            clearSkyGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][clearSkyGHI_col]
+        except:
+            return None
 
         return clearSkyGHIs
 
@@ -198,7 +210,7 @@ class DataLoader():
         # print("**********************hdf5 path ", hdf5_path)
 
         with h5py.File(hdf5_path, 'r') as h5_data:
-            print("h5_data file ", h5_data)
+            # print("h5_data file ", h5_data)
             lats, lons = utils.fetch_hdf5_sample("lat", h5_data, 0), utils.fetch_hdf5_sample("lon", h5_data, 0)
 
         stations_coords = {}
@@ -267,18 +279,26 @@ class DataLoader():
                     timestamps_from_history.append(time_index - self.input_time_offsets[i])
 
                 true_GHIs = self.get_TrueGHIs(time_index, station_id)
+                if true_GHIs is None:
+                    continue
+
                 clearsky_GHIs = self.get_ClearSkyGHIs(time_index, station_id)
+                if clearsky_GHIs is None:
+                    continue
+
                 night_flags = np.zeros(4)
 
                 # get cropped images for given timestamp
                 # tensor of size (input_seq_length x C x W x H)
-                images = self.crop_images(station_df, timestamps_from_history, stations_coordinates,
-                                      window_size=self.config["image_size_m"] // 2)
+                images = self.crop_images(station_df, timestamps_from_history,
+                                          {station_id: stations_coordinates[station_id]},
+                                          window_size=self.config["image_size_m"] // 2)
+
                 if images is None:
                     continue
 
-                print("Images size: ", images.shape)
-                print("GHIs ",true_GHIs, clearsky_GHIs)
+                # print("Images size: ", images.shape)
+                # print("GHIs ", true_GHIs, clearsky_GHIs)
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
 
