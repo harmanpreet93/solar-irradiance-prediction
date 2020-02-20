@@ -5,7 +5,8 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from data_loader import DataLoader
-from model_logging import get_logger, get_summary_writer, do_code_profiling
+from model_logging import get_logger, get_summary_writers, do_code_profiling
+from tensorboard.plugins.hparams import api as hp
 
 logger = get_logger()
 
@@ -108,8 +109,7 @@ def train(
     # Objective/Loss function: MSE Loss
     loss_fn = tf.keras.losses.MeanSquaredError()
 
-    # Set up tensorboard metric logging
-    train_summary_writer, test_summary_writer = get_summary_writer()
+    # Define tensorboard metrics
     train_loss = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
     test_loss = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
     train_rmse = tf.keras.metrics.RootMeanSquaredError()
@@ -117,6 +117,21 @@ def train(
 
     # Checkpoint management (for model save/restore)
     manager, ckpt, early_stop_metric, start_epoch = manage_model_checkpoints(optimizer, model, user_config)
+
+    # Get tensorboard file writers
+    train_summary_writer, test_summary_writer, hparam_summary_writer = get_summary_writers()
+
+    # Log hyperparameters
+    with hparam_summary_writer.as_default():
+        hp.hparams({
+            'nb_epoch': nb_epoch,
+            'learning_rate': learning_rate,
+            'max_k_ghi': max_k_ghi,
+            'batch_size': user_config["batch_size"],
+            'input_seq_length': user_config["input_seq_length"],
+            'nb_feature_maps': user_config["nb_feature_maps"],
+            'nb_dense_units': user_config["nb_dense_units"],
+        })
 
     # training starts here
     with tqdm.tqdm("training", total=nb_epoch) as pbar:
@@ -155,6 +170,10 @@ def train(
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=epoch)
                 tf.summary.scalar('rmse', test_rmse.result(), step=epoch)
+
+            with hparam_summary_writer.as_default():
+                tf.summary.scalar("val_loss", test_loss.result(), step=epoch)
+                tf.summary.scalar("val_rmse", test_rmse.result(), step=epoch)
 
             # Create a model checkpoint after each epoch
             ckpt.step.assign_add(1)

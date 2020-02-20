@@ -1,1 +1,1 @@
- tensorboard --logdir log/gradient_tape/
+ tensorboard --logdir log/

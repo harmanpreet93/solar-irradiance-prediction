@@ -1,6 +1,8 @@
 {
   "model_file": "model/my_model.index",
   "target_model":"3d_cnn_model",
+  "nb_feature_maps":16,
+  "nb_dense_units":256,
 
   "batch_size":32,
   "learning_rate":0.001,
@@ -16,6 +18,6 @@
 
   "code_profiling_enabled":true,
 
-  "ignore_checkpoints":false,
+  "ignore_checkpoints":true,
   "model_info": "model/training_info.npy"
 }
