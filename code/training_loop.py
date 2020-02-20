@@ -94,9 +94,27 @@ def train(
     train_rmse = tf.keras.metrics.RootMeanSquaredError()
     test_rmse = tf.keras.metrics.RootMeanSquaredError()
 
+    # Checkpoint management
+    ckpt = tf.train.Checkpoint(step=tf.Variable(0), optimizer=optimizer, net=model)
+    manager = tf.train.CheckpointManager(ckpt, './model/tf_ckpts', max_to_keep=3)
+
+    if user_config["ignore_checkpoints"]:
+        print("Initializing from scratch.")
+        start_epoch = 0
+    else:
+        ckpt.restore(manager.latest_checkpoint)
+        if manager.latest_checkpoint:
+            print("Restored from {}".format(manager.latest_checkpoint))
+        else:
+            print("Initializing from scratch.")
+            start_epoch = 0
+
+    start_epoch = ckpt.step.numpy()
+
     # training starts here
     with tqdm.tqdm("training", total=nb_epoch) as pbar:
-        for epoch in range(nb_epoch):
+        pbar.update(start_epoch)
+        for epoch in range(start_epoch, nb_epoch):
 
             # Train the model using the training set for one epoch
             for minibatch in train_data_loader:
@@ -130,6 +148,11 @@ def train(
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=epoch)
                 tf.summary.scalar('rmse', test_rmse.result(), step=epoch)
+
+            # TODO: checkpoint here
+            ckpt.step.assign_add(1)
+            save_path = manager.save()
+            logger.debug("Saved checkpoint for epoch {}: {}".format(int(ckpt.step), save_path))
 
             logger.debug(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
