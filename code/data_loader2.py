@@ -7,12 +7,7 @@ import pandas as pd
 import numpy as np
 import h5py
 import utils
-
-
-def get_nighttime_flags(batch_of_datetimes):
-    batch_size = len(batch_of_datetimes)
-    # TODO: Return real nighttime flags; assume no nighttime values for now
-    return np.zeros(shape=(batch_size, 4))
+from handle_missing_img import handle_missing_img2, interpolate_images
 
 
 class DataLoader():
@@ -50,13 +45,14 @@ class DataLoader():
     def initialize(self):
         self.logger = get_logger()
         self.logger.debug("Initialize start")
-        self.test_station = self.stations[0]
+        self.test_station = self.stations
         self.output_seq_len = len(self.target_time_offsets)
         self.input_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in self.config["input_time_offsets"]]
+        self.logger.debug("Starting generator")
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
             output_types=(tf.float32, tf.float32, tf.float32, tf.float32, tf.float32)
-        ).batch(self.config["batch_size"]).prefetch(self.config["batch_size"])
+        ).batch(self.config["batch_size"]).prefetch(self.config["batch_size"]).repeat()
 
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
@@ -89,6 +85,7 @@ class DataLoader():
         )
         return image
 
+
     def get_nighttime_flags(self, batch_of_datetimes):
         batch_size = len(batch_of_datetimes)
         # TODO: Return real nighttime flags; assume no nighttime values for now
@@ -109,8 +106,8 @@ class DataLoader():
 
     def channel_min_max(self):
         """ 
-        :return: one list of max pixel value per channel and 
-        one list of min pixel value per channel (index 0 corresponds to channel 1 and so on)
+        :return: one list of max pixel value per channel 
+        and one list of min pixel value per channel (index 0 corresponds to channel 1 and so on)
         """
         large = [0] * 5
         small = [0] * 5
@@ -122,7 +119,8 @@ class DataLoader():
         # need to iterate over the cleaned dataframe to read every file 
         # (it's quick since it's only reading the attribute and not opening the file)
         for index, row in main_dataframe_copy.iterrows():
-            hdf5_path = row["hdf5_8bit_path"]
+            # hdf5_path = row["hdf5_8bit_path"]
+            hdf5_path = "data/hdf5v7_8bit_Jan_2015/2015.01.01.0800.h5"
             with h5py.File(hdf5_path, 'r') as h5_data:
                 for indx, channel in enumerate(channels):
                     large[indx] = h5_data[channel].attrs.get("orig_max", None)
@@ -164,70 +162,118 @@ class DataLoader():
 
         return image
 
+    def crop_one_img(self,ch1_data,x_coord,y_coord,window_size):
+        return ch1_data[x_coord - window_size:x_coord + window_size,
+        y_coord - window_size:y_coord + window_size]
+
 
     def crop_images(self,
                     df: pd.DataFrame,
-                    timestamps_from_history: list,
+                    timestamp: str,
                     coordinates: typing.Dict[str, typing.Tuple],
                     window_size: float,
                     ):
+        self.logger.debug("crop_images")
 
         assert window_size < 42, f"window_size value of {window_size} is too big, please reduce it to 42 and lower"
 
         n_channels = 5
-        image_crops = np.zeros(shape=(
-            len(timestamps_from_history), window_size * 2, window_size * 2, n_channels
-        ))
-        smallest, largest = self.channel_min_max()
+        image_crops = np.zeros(shape=(window_size * 2, window_size * 2, n_channels))
+        print("Min max channel calculation ... ")
+        # ML take a lot of time!
+        smallest, largest = 0, 1 #self.channel_min_max()
+        print("smallest, largest =", smallest, largest)
 
-        for index, timestamp in enumerate(timestamps_from_history):
-            # print("Timestamp: {}".format(timestamp))
-            try:
-                row = df.loc[timestamp]
-            except:
-                print("Timestamp {} not found, do something!".format(timestamp))
-                print("Not considering this sequence while training")
-                return None
+        # The dataloader will call this function at each timestamp
+        # for index, timestamp in enumerate(timestamps_from_history):
+        row = df.loc[timestamp]
+        hdf5_path = row["hdf5_8bit_path"]
+        hdf5_path = 'data/hdf5v7_8bit_Jan_2015/2015.01.01.0800.h5'
+        # file_date = hdf5_path.split("/")[-1][:-3]
+        # date of the file
+        # file_date = "_".join(file_date.split('.'))
+        
+        # ML: We don't need this loop as we loop already over stations
+            # for station_coordinates in coordinates.items():
+            # retrieves station name and coordinates for each station
+        station_name = [*coordinates][0]
+        x_coord = [*coordinates.values()][0][0]
+        y_coord = [*coordinates.values()][0][1]
+        print("retrieving the coordinates:",station_name,x_coord,y_coord)
+        
+        hdf5_offset = row["hdf5_8bit_offset"].astype(int)
+        print("hdf5_offset: ", hdf5_offset)
 
-            hdf5_path = row["hdf5_8bit_path"]
-            # hdf5_path = '/project/cq-training-1/project1/data/hdf5v7_8bit/2015.01.01.0800.h5'
-            # file_date = hdf5_path.split("/")[-1][:-3]
-            # date of the file
-            # file_date = "_".join(file_date.split('.'))
-            hdf5_offset = row["hdf5_8bit_offset"]
-            # print("harman ncdf_path ", row["ncdf_path"])
+        # ML: we will open and close the same h5 file as we loop over timestamps within the same day
+        with h5py.File(hdf5_path, "r") as h5_data:
+            print("Processing current h5 file: ", hdf5_path)
+            ch1_lut = h5_data["ch1_LUT"][()]
+            print("current offset lut", ch1_lut[hdf5_offset])
+            if (ch1_lut[hdf5_offset] == -1):
+                print("/!\\ ===== missing image at ===== /!\\", hdf5_offset)
+                # take offset -1 and offset + 1
+                # remettre la normalization after optimization
+                prev_img_ch1 = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset - 1)#, "ch1", largest, smallest)
+                prev_img_ch2 = utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset - 1)#, "ch2", largest, smallest)
+                prev_img_ch3 = utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset - 1)#, "ch3", largest, smallest)
+                prev_img_ch4 = utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset - 1)#, "ch4", largest, smallest)
+                prev_img_ch6 = utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset - 1)#, "ch6", largest, smallest)
 
-            for station_coordinates in coordinates.items():
-                # retrieves station name and coordinates for each station
-                station_name = station_coordinates[0]
-                x_coord = station_coordinates[1][0]
-                y_coord = station_coordinates[1][1]
+                prev_img_ch1_crop = self.crop_one_img(prev_img_ch1,x_coord,y_coord,window_size)
+                prev_img_ch2_crop = self.crop_one_img(prev_img_ch2,x_coord,y_coord,window_size)
+                prev_img_ch3_crop = self.crop_one_img(prev_img_ch3,x_coord,y_coord,window_size)
+                prev_img_ch4_crop = self.crop_one_img(prev_img_ch4,x_coord,y_coord,window_size)
+                prev_img_ch6_crop = self.crop_one_img(prev_img_ch6,x_coord,y_coord,window_size)
 
-                with h5py.File(hdf5_path, "r") as h5_data:
-                    # normalize arrays and crop the station for each channel
-                    ch1_data = self.normalize_images(utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset), "ch1", largest, smallest)
-                    ch2_data = self.normalize_images(utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset), "ch2", largest, smallest)
-                    ch3_data = self.normalize_images(utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset), "ch3", largest, smallest)
-                    ch4_data = self.normalize_images(utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset), "ch4", largest, smallest)
-                    ch6_data = self.normalize_images(utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset), "ch6", largest, smallest)
+                print("prev_img_ch1.shape=", prev_img_ch1.shape)
+                print("prev_img_ch1_crop.shape=", prev_img_ch1_crop.shape)
 
-                    if ch1_data is None or ch2_data is None or ch3_data is None or ch4_data is None or ch6_data is None:
-                        return None
+                next_img_ch1 = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset + 1)#, "ch1", largest, smallest)
+                next_img_ch2 = utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset + 1)#, "ch2", largest, smallest)
+                next_img_ch3 = utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset + 1)#, "ch3", largest, smallest)
+                next_img_ch4 = utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset + 1)#, "ch4", largest, smallest)
+                next_img_ch6 = utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset + 1)#, "ch6", largest, smallest)
 
-                    ch1_crop = ch1_data[x_coord - window_size:x_coord + window_size,
-                               y_coord - window_size:y_coord + window_size]
-                    ch2_crop = ch2_data[x_coord - window_size:x_coord + window_size,
-                               y_coord - window_size:y_coord + window_size]
-                    ch3_crop = ch3_data[x_coord - window_size:x_coord + window_size,
-                               y_coord - window_size:y_coord + window_size]
-                    ch4_crop = ch4_data[x_coord - window_size:x_coord + window_size,
-                               y_coord - window_size:y_coord + window_size]
-                    ch6_crop = ch6_data[x_coord - window_size:x_coord + window_size,
-                               y_coord - window_size:y_coord + window_size]
-                    image_crops[index] = np.stack((ch1_crop, ch2_crop, ch3_crop, ch4_crop, ch6_crop), axis=-1)
+                next_img_ch1_crop = self.crop_one_img(next_img_ch1,x_coord,y_coord,window_size)
+                next_img_ch2_crop = self.crop_one_img(next_img_ch2,x_coord,y_coord,window_size)
+                next_img_ch3_crop = self.crop_one_img(next_img_ch3,x_coord,y_coord,window_size)
+                next_img_ch4_crop = self.crop_one_img(next_img_ch4,x_coord,y_coord,window_size)
+                next_img_ch6_crop = self.crop_one_img(next_img_ch6,x_coord,y_coord,window_size)
+                
+                print("next_img_ch1.shape=", next_img_ch1.shape)
+                print("next_img_ch1_crop.shape=", next_img_ch1_crop.shape)
+                
+                ch1_crop = handle_missing_img2(prev_img_ch1_crop, next_img_ch1_crop).reshape(prev_img_ch1_crop.shape)
+                ch2_crop = handle_missing_img2(prev_img_ch2_crop, next_img_ch2_crop).reshape(prev_img_ch2_crop.shape)
+                ch3_crop = handle_missing_img2(prev_img_ch3_crop, next_img_ch3_crop).reshape(prev_img_ch3_crop.shape)
+                ch4_crop = handle_missing_img2(prev_img_ch4_crop, next_img_ch4_crop).reshape(prev_img_ch4_crop.shape)
+                ch6_crop = handle_missing_img2(prev_img_ch6_crop, next_img_ch5_crop).reshape(prev_img_ch6_crop.shape)
+                
+                print("ch1_crop.shape=", ch1_crop.shape)
+            
+            else:
+                print("no missing img")
+                # ML: redo the normalization after optimization
+                ch1_data = utils.fetch_hdf5_sample("ch1", h5_data, hdf5_offset)#, "ch1", largest, smallest)
+                ch2_data = utils.fetch_hdf5_sample("ch2", h5_data, hdf5_offset)#, "ch2", largest, smallest)
+                ch3_data = utils.fetch_hdf5_sample("ch3", h5_data, hdf5_offset)#, "ch3", largest, smallest)
+                ch4_data = utils.fetch_hdf5_sample("ch4", h5_data, hdf5_offset)#, "ch4", largest, smallest)
+                ch6_data = utils.fetch_hdf5_sample("ch6", h5_data, hdf5_offset)#, "ch6", largest, smallest)
 
-                    # save the images as .h5 file, will need to specify path
-                    # generate_images(img_crop, station_name, file_date, hdf5_offset)
+                ch1_crop = self.crop_one_img(ch1_data,x_coord,y_coord,window_size)
+                ch2_crop = self.crop_one_img(ch2_data,x_coord,y_coord,window_size)
+                ch3_crop = self.crop_one_img(ch3_data,x_coord,y_coord,window_size)
+                ch4_crop = self.crop_one_img(ch4_data,x_coord,y_coord,window_size)
+                ch6_crop = self.crop_one_img(ch6_data,x_coord,y_coord,window_size)
+                # we can normalize the output here or in the DataLoader init
+            
+        image_crops = np.stack((ch1_crop, ch2_crop, ch3_crop, ch4_crop, ch6_crop), axis=-1)
+        # TO DO add previous images corresponding to sequence_length
+
+        print("==== image_crops.shape=", image_crops.shape)
+
+        # save the images as .h5 file, will need to specify path
+        # generate_images(img_crop, station_name, file_date, hdf5_offset)
 
         return image_crops
 
@@ -235,14 +281,10 @@ class DataLoader():
     def get_TrueGHIs(self, timestamp, station_id):
         trueGHIs = [0] * 4
         GHI_col = station_id + "_GHI"
-        # if timestamp missing
-        try:
-            trueGHIs[0] = self.dataframe.loc[timestamp][GHI_col]  # T0_GHI
-            trueGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][GHI_col]  # T1_GHI
-            trueGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][GHI_col]  # T3_GHI
-            trueGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][GHI_col]  # T6_GHI
-        except:
-            return None
+        trueGHIs[0] = self.dataframe.loc[timestamp][GHI_col]  # T0_GHI
+        trueGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][GHI_col]  # T1_GHI
+        trueGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][GHI_col]  # T3_GHI
+        trueGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][GHI_col]  # T6_GHI
 
         return trueGHIs
 
@@ -250,18 +292,15 @@ class DataLoader():
     def get_ClearSkyGHIs(self, timestamp, station_id):
         clearSkyGHIs = [0] * 4
         clearSkyGHI_col = station_id + "_CLEARSKY_GHI"
-        # if timestamp missing
-        try:
-            clearSkyGHIs[0] = self.dataframe.loc[timestamp][clearSkyGHI_col]
-            clearSkyGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][clearSkyGHI_col]
-            clearSkyGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][clearSkyGHI_col]
-            clearSkyGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][clearSkyGHI_col]
-        except:
-            return None
+        clearSkyGHIs[0] = self.dataframe.loc[timestamp][clearSkyGHI_col]
+        clearSkyGHIs[1] = self.dataframe.loc[timestamp + self.target_time_offsets[1]][clearSkyGHI_col]
+        clearSkyGHIs[2] = self.dataframe.loc[timestamp + self.target_time_offsets[2]][clearSkyGHI_col]
+        clearSkyGHIs[3] = self.dataframe.loc[timestamp + self.target_time_offsets[3]][clearSkyGHI_col]
 
         return clearSkyGHIs
 
-
+    # ML: to be optimised the coords will not change across the time,
+    # so we can put them static on the config
     def get_stations_coordinates(self,
                                  df: pd.DataFrame
                                  ) -> typing.Dict[str, typing.Tuple]:
@@ -273,11 +312,13 @@ class DataLoader():
         """
         # takes the first value for the hdf5 path
         # hdf5_path = df["hdf5_8bit_path"][2]
-        hdf5_path = "/project/cq-training-1/project1/data/hdf5v7_8bit/2015.01.01.0800.h5"
-        # print("**********************hdf5 path ", hdf5_path)
+        hdf5_path = "data/hdf5v7_8bit_Jan_2015/2015.01.01.0800.h5"
+        # ML: We don't need to use h5 file to get the coords,
+        # we can assume they don't change and then store them as config params
+        #print("**********************hdf5 path ", hdf5_path)
 
         with h5py.File(hdf5_path, 'r') as h5_data:
-            # print("h5_data file ", h5_data)
+            print("h5_data file ", h5_data)
             lats, lons = utils.fetch_hdf5_sample("lat", h5_data, 0), utils.fetch_hdf5_sample("lon", h5_data, 0)
 
         stations_coords = {}
@@ -289,8 +330,9 @@ class DataLoader():
         return stations_coords
 
 
-    def preprocess_and_filter_data(self, main_df):
-
+    def preprocess_and_filter_data(self, main_df0,target_datetimes):
+        # Get only targeted datetimes
+        main_df = main_df0.loc[target_datetimes].copy()
         # make sure it sorted by its index
         main_df.sort_index(ascending=True, inplace=True)
 
@@ -322,18 +364,29 @@ class DataLoader():
 
         return stations_df
 
-
     def data_generator_fn(self):
+        self.logger.debug("Data generator")
+        print("********* Data generator starts *********")
         main_dataframe_copy = self.dataframe.copy()
 
-        station_wise_dataframes = self.preprocess_and_filter_data(main_dataframe_copy)
+        # ML: we take only targeted timestamps
+        station_wise_dataframes = self.preprocess_and_filter_data(main_dataframe_copy,self.target_datetimes)
 
+        print("List of stations:",self.stations)
+        
+        # ML: We shoud review this loop cause the crop method is also iterating over station,
+        # we should pass station id as input to crop
         for station_id in self.stations:
+            print("====== Processing station :", station_id)
             station_df = station_wise_dataframes[station_id]
             DAYTIME = np.str(station_id + '_DAYTIME')
+            print("How many timestamps of stations:",len(station_df))
 
             # get station coordinates, need to be called only once
-            stations_coordinates = self.get_stations_coordinates(station_df)
+            # ML: get only the coords of the current station_id
+            # ML: to be optimised see note in the definition
+            stations_coordinates = {station_id: self.get_stations_coordinates(station_df)[station_id]}
+            print("station corrds :", stations_coordinates)
 
             # sort based on datetime
             station_df.sort_index(ascending=True, inplace=True)
@@ -341,35 +394,34 @@ class DataLoader():
             # drop all night times as of now: to make solution simpler
             station_df.drop(station_df.loc[station_df[DAYTIME] == 0.0].index, inplace=True)
 
-            for time_index, col in station_df[self.config["input_seq_length"]:].iterrows():
-                # get past timestamps in range of input_seq_length
-                timestamps_from_history = []
-                for i in range(self.config["input_seq_length"]):
-                    timestamps_from_history.append(time_index - self.input_time_offsets[i])
+            for time_index, col in station_df.iterrows():
+                print("Timestamp = ",time_index)
+                # TODO Get past timestamps in range of input_seq_length
+                #timestamps_from_history = []
+                #for i in range(self.config["input_seq_length"]):
+                    #timestamps_from_history.append(time_index - self.input_time_offsets[i])
+            
+                #print("Get true GHI values ...")
 
                 true_GHIs = self.get_TrueGHIs(time_index, station_id)
-                if true_GHIs is None:
-                    continue
-
                 clearsky_GHIs = self.get_ClearSkyGHIs(time_index, station_id)
-                if clearsky_GHIs is None:
-                    continue
-
                 night_flags = np.zeros(4)
+                #print("... DONE")
 
                 # get cropped images for given timestamp
                 # tensor of size (input_seq_length x C x W x H)
-                images = self.crop_images(station_df, timestamps_from_history,
-                                          {station_id: stations_coordinates[station_id]},
-                                          window_size=self.config["image_size_m"] // 2)
-
+                #print("station id coords are: ", stations_coordinates)
+                print("Start retreiving and croping the images ... ")
+                images = self.crop_images(station_df, time_index, stations_coordinates,
+                                      window_size=self.config["image_size_m"] // 2)
+                #print("... DONE")
                 if images is None:
                     continue
 
-                # print("Images size: ", images.shape)
-                # print("GHIs ", true_GHIs, clearsky_GHIs)
+                #print("Images size: ", images.shape)
+                # print("GHIs ",true_GHIs, clearsky_GHIs)
 
-                yield images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
+            return images, clearsky_GHIs, true_GHIs, night_flags, true_GHIs
 
 
     def get_data_loader(self):
