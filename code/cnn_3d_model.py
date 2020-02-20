@@ -68,9 +68,10 @@ class MainModel(tf.keras.Model):
             256,
             activation=tf.nn.relu
         )
+        # Output layer
         self.dense_7 = tf.keras.layers.Dense(
             len(self.target_time_offsets),
-            activation=tf.nn.relu
+            activation=tf.nn.sigmoid
         )
 
     def call(self, inputs, predict_k=False):

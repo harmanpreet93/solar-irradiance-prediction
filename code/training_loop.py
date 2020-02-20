@@ -12,16 +12,16 @@ MAX_K_GHI = 1.2
 
 def k_to_true_ghi(k, clearsky_ghi):
     # Clip too large and small k values
-    k = tf.minimum(k, MAX_K_GHI)
+    k = tf.minimum(k, 1.0)
     k = tf.maximum(k, 0.0)
-    true_ghi = tf.math.multiply_no_nan(k, clearsky_ghi)
+    true_ghi = tf.math.multiply_no_nan(k * MAX_K_GHI, clearsky_ghi)
     return true_ghi
 
 
 def ghi_to_k(true_ghi, clearsky_ghi):
-    k = tf.math.divide_no_nan(true_ghi, clearsky_ghi)
+    k = tf.math.divide_no_nan(true_ghi, clearsky_ghi * MAX_K_GHI)
     # Clip too large and small k values
-    k = tf.minimum(k, MAX_K_GHI)
+    k = tf.minimum(k, 1.0)
     k = tf.maximum(k, 0.0)
     return k
 
