@@ -4,7 +4,7 @@
 
   "batch_size":32,
   "learning_rate":0.001,
-  "nb_epoch":30,
+  "nb_epoch":10,
   "max_k_ghi":1.2,
   
   "image_size_m":82,
@@ -14,5 +14,8 @@
   "input_seq_length":2,
   "nb_channels":5,
 
-  "code_profiling_enabled":true
+  "code_profiling_enabled":true,
+
+  "ignore_checkpoints":false,
+  "model_info": "model/training_info.npy"
 }
