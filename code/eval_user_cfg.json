@@ -19,5 +19,6 @@
   "start_bound_train": "2010-01-01",
   "end_bound_train": "2015-01-01",
   "start_bound_val": "2015-01-01",
-  "end_bound_val": "2016-01-01"
+  "end_bound_val": "2016-01-01",
+  "delta_time": "-30 min"
 }

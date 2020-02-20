@@ -50,10 +50,10 @@ def load_df(user_config):
     return pd.read_pickle(dataframe_path)
 
 
-def get_datetimes_with_past_im_avail(candidate_datetimes):
-
+def get_datetimes_with_past_im_avail(candidate_datetimes, user_config):
+    delta_time = user_config["delta_time"]
     nb_images_for_training = 3
-    timedeltas = pd.timedelta_range(start='-15 min', periods=(nb_images_for_training-1), freq='-15 min')
+    timedeltas = pd.timedelta_range(start=delta_time, periods=(nb_images_for_training-1), freq=delta_time)
 
     final_datetimes = []
     for candidate_datetime in candidate_datetimes:
@@ -126,7 +126,7 @@ def main(
 
     candidate_datetimes = get_datetimes_from_df(df)
 
-    processed_datetimes = get_datetimes_with_past_im_avail(candidate_datetimes)
+    processed_datetimes = get_datetimes_with_past_im_avail(candidate_datetimes, user_config)
 
     train_datetimes, val_datetimes = clip_datetimes(user_config, processed_datetimes)
 
