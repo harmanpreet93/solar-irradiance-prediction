@@ -11,14 +11,12 @@ MAX_K_GHI = 1.2
 
 
 def k_to_true_ghi(k, clearsky_ghi):
-    # Clip too large and small k values
-    k = tf.minimum(k, 1.0)
-    k = tf.maximum(k, 0.0)
     true_ghi = tf.math.multiply_no_nan(k * MAX_K_GHI, clearsky_ghi)
     return true_ghi
 
 
 def ghi_to_k(true_ghi, clearsky_ghi):
+    true_ghi = tf.maximum(true_ghi, 0.0)
     k = tf.math.divide_no_nan(true_ghi, clearsky_ghi * MAX_K_GHI)
     # Clip too large and small k values
     k = tf.minimum(k, 1.0)
@@ -26,20 +24,21 @@ def ghi_to_k(true_ghi, clearsky_ghi):
     return k
 
 
-def mask_nighttime_predictions(y_pred, y_true, night_flag):
+def mask_nighttime_predictions(*args, night_flag):
     day_flag = tf.logical_not(night_flag)
-    y_pred = tf.boolean_mask(tensor=y_pred, mask=day_flag)
-    y_true = tf.boolean_mask(tensor=y_true, mask=day_flag)
     weight = tf.reduce_sum(tf.cast(day_flag, tf.float32))
-    return y_pred, y_true, weight
+    outputs = []
+    for arg in args:
+        outputs += [tf.boolean_mask(tensor=arg, mask=day_flag)]
+    return outputs + [weight]
 
 
 def train_step(model, optimizer, loss_fn, x_train, y_train):
     k_train = ghi_to_k(true_ghi=y_train, clearsky_ghi=x_train[1])
     with tf.GradientTape() as tape:
-        k_pred = model(x_train, predict_k=True, training=True)
-        y_pred = ghi_to_k(true_ghi=k_pred, clearsky_ghi=x_train[1])
-        k_pred, k_train, weight = mask_nighttime_predictions(k_pred, k_train, x_train[3])
+        k_pred, y_pred = model(x_train, training=True)
+        k_pred, k_train, y_pred, y_train, weight = \
+            mask_nighttime_predictions(k_pred, k_train, y_pred, y_train, night_flag=x_train[3])
         loss = loss_fn(k_train, k_pred)
     gradient = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradient, model.trainable_variables))
@@ -47,9 +46,11 @@ def train_step(model, optimizer, loss_fn, x_train, y_train):
 
 
 def test_step(model, loss_fn, x_test, y_test):
-    y_pred = model(x_test, predict_k=False)
-    y_pred, y_test, weight = mask_nighttime_predictions(y_pred, y_test, x_test[3])
-    loss = loss_fn(y_test, y_pred)
+    k_test = ghi_to_k(true_ghi=y_test, clearsky_ghi=x_test[1])
+    k_pred, y_pred = model(x_test)
+    y_pred, y_test, k_pred, k_test, weight = \
+        mask_nighttime_predictions(y_pred, y_test, k_pred, k_test, night_flag=x_test[3])
+    loss = loss_fn(k_test, k_pred)
     return loss, y_test, y_pred, weight
 
 

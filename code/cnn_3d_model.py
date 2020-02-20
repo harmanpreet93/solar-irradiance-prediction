@@ -93,11 +93,10 @@ class MainModel(tf.keras.Model):
         x = self.conv2d_5(x)
         x = self.flatten(x)
         x = self.dense_6(x)
-        y = self.dense_7(x)
+        k = self.dense_7(x)
 
-        assert not np.isnan(y).any()
+        assert not np.isnan(k).any()
 
-        if not predict_k:
-            y = k_to_true_ghi(y, clearsky_GHIs)
+        y = k_to_true_ghi(k, clearsky_GHIs)
 
-        return y
+        return k, y
