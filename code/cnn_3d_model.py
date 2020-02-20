@@ -15,6 +15,7 @@ class MainModel(tf.keras.Model):
         stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
         target_time_offsets: typing.List[datetime.timedelta],
         config: typing.Dict[typing.AnyStr, typing.Any],
+        return_ghi_only=False
     ):
         """
         Args:
@@ -28,6 +29,8 @@ class MainModel(tf.keras.Model):
         self.stations = stations
         self.target_time_offsets = target_time_offsets
         self.config = config
+        self.return_ghi_only = return_ghi_only
+        self.max_k_ghi = config["max_k_ghi"]
         self.initialize()
 
     def initialize(self):
@@ -74,7 +77,7 @@ class MainModel(tf.keras.Model):
             activation=tf.nn.sigmoid
         )
 
-    def call(self, inputs, predict_k=False):
+    def call(self, inputs):
         '''
         Defines the forward pass through our model
         '''
@@ -97,6 +100,9 @@ class MainModel(tf.keras.Model):
 
         assert not np.isnan(k).any()
 
-        y = k_to_true_ghi(k, clearsky_GHIs)
+        y = k_to_true_ghi(self.max_k_ghi, k, clearsky_GHIs)
+
+        if self.return_ghi_only:
+            return y
 
         return k, y

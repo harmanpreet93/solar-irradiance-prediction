@@ -90,7 +90,7 @@ def prepare_model(
 
     MainModel = select_model(config)
 
-    model = MainModel(stations, target_time_offsets, config)
+    model = MainModel(stations, target_time_offsets, config, return_ghi_only=True)
 
     if MainModel.TRAINING_REQUIRED:
         weights_file = config["model_file"]

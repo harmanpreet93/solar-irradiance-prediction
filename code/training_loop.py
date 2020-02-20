@@ -7,17 +7,16 @@ from data_loader import DataLoader
 from model_logging import get_logger, get_summary_writer, do_code_profiling
 
 logger = get_logger()
-MAX_K_GHI = 1.2
 
 
-def k_to_true_ghi(k, clearsky_ghi):
-    true_ghi = tf.math.multiply_no_nan(k * MAX_K_GHI, clearsky_ghi)
+def k_to_true_ghi(max_k_ghi, k, clearsky_ghi):
+    true_ghi = tf.math.multiply_no_nan(k * max_k_ghi, clearsky_ghi)
     return true_ghi
 
 
-def ghi_to_k(true_ghi, clearsky_ghi):
+def ghi_to_k(max_k_ghi, true_ghi, clearsky_ghi):
     true_ghi = tf.maximum(true_ghi, 0.0)
-    k = tf.math.divide_no_nan(true_ghi, clearsky_ghi * MAX_K_GHI)
+    k = tf.math.divide_no_nan(true_ghi, clearsky_ghi * max_k_ghi)
     # Clip too large and small k values
     k = tf.minimum(k, 1.0)
     k = tf.maximum(k, 0.0)
@@ -33,8 +32,8 @@ def mask_nighttime_predictions(*args, night_flag):
     return outputs + [weight]
 
 
-def train_step(model, optimizer, loss_fn, x_train, y_train):
-    k_train = ghi_to_k(true_ghi=y_train, clearsky_ghi=x_train[1])
+def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
+    k_train = ghi_to_k(max_k_ghi, true_ghi=y_train, clearsky_ghi=x_train[1])
     with tf.GradientTape() as tape:
         k_pred, y_pred = model(x_train, training=True)
         k_pred, k_train, y_pred, y_train, weight = \
@@ -45,8 +44,8 @@ def train_step(model, optimizer, loss_fn, x_train, y_train):
     return loss, y_train, y_pred, weight
 
 
-def test_step(model, loss_fn, x_test, y_test):
-    k_test = ghi_to_k(true_ghi=y_test, clearsky_ghi=x_test[1])
+def test_step(model, loss_fn, max_k_ghi, x_test, y_test):
+    k_test = ghi_to_k(max_k_ghi, true_ghi=y_test, clearsky_ghi=x_test[1])
     k_pred, y_pred = model(x_test)
     y_pred, y_test, k_pred, k_test, weight = \
         mask_nighttime_predictions(y_pred, y_test, k_pred, k_test, night_flag=x_test[3])
@@ -81,6 +80,7 @@ def train(
     # set hyper-parameters
     nb_epoch = user_config["nb_epoch"]
     learning_rate = user_config["learning_rate"]
+    max_k_ghi = user_config["max_k_ghi"]
 
     # Optimizer: Adam - for decaying learning rate
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
@@ -104,6 +104,7 @@ def train(
                     model,
                     optimizer,
                     loss_fn,
+                    max_k_ghi,
                     x_train=minibatch[:-1],
                     y_train=minibatch[-1]
                 )
@@ -119,6 +120,7 @@ def train(
                 loss, y_test, y_pred, weight = test_step(
                     model,
                     loss_fn,
+                    max_k_ghi,
                     x_test=minibatch[:-1],
                     y_test=minibatch[-1]
                 )

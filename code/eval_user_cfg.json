@@ -4,7 +4,8 @@
 
   "batch_size":32,
   "learning_rate":0.001,
-  "nb_epoch":20,
+  "nb_epoch":30,
+  "max_k_ghi":1.2,
   
   "image_size_m":82,
   "image_size_n":82,
