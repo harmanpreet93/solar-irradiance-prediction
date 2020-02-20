@@ -16,5 +16,6 @@
 
   "code_profiling_enabled":true,
 
-  "ignore_checkpoints":false
+  "ignore_checkpoints":false,
+  "model_info": "model/training_info.npy"
 }

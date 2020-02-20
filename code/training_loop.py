@@ -1,6 +1,7 @@
 import tqdm
 import typing
 import datetime
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from data_loader import DataLoader
@@ -58,17 +59,21 @@ def manage_model_checkpoints(optimizer, model, user_config):
     manager = tf.train.CheckpointManager(ckpt, './model/tf_ckpts', max_to_keep=3)
 
     if user_config["ignore_checkpoints"]:
-        print("Initializing from scratch.")
+        print("Model checkpoints ignored; Initializing from scratch.")
+        early_stop_metric = np.inf
+        np.save(user_config["model_info"], [early_stop_metric])
     else:
         ckpt.restore(manager.latest_checkpoint)
         if manager.latest_checkpoint:
-            print("Restored from {}".format(manager.latest_checkpoint))
+            print("Restored model from {}".format(manager.latest_checkpoint))
+            early_stop_metric = np.load(user_config["model_info"])[0]
         else:
-            print("Initializing from scratch.")
+            print("No checkpoint found; Initializing from scratch.")
+            early_stop_metric = np.inf
 
     start_epoch = ckpt.step.numpy()
 
-    return manager, ckpt, start_epoch
+    return manager, ckpt, early_stop_metric, start_epoch
 
 
 @do_code_profiling
@@ -111,7 +116,7 @@ def train(
     test_rmse = tf.keras.metrics.RootMeanSquaredError()
 
     # Checkpoint management (for model save/restore)
-    manager, ckpt, start_epoch = manage_model_checkpoints(optimizer, model, user_config)
+    manager, ckpt, early_stop_metric, start_epoch = manage_model_checkpoints(optimizer, model, user_config)
 
     # training starts here
     with tqdm.tqdm("training", total=nb_epoch) as pbar:
@@ -156,6 +161,12 @@ def train(
             save_path = manager.save()
             logger.debug("Saved checkpoint for epoch {}: {}".format(int(ckpt.step), save_path))
 
+            # Save the best model
+            if test_loss.result() < early_stop_metric:
+                early_stop_metric = test_loss.result()
+                model.save_weights("model/my_model", save_format="tf")
+                np.save(user_config["model_info"], [early_stop_metric.numpy()])
+
             logger.debug(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
                 .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
@@ -168,6 +179,3 @@ def train(
             test_rmse.reset_states()
 
             pbar.update(1)
-
-    # save model weights to file
-    model.save_weights("model/my_model", save_format="tf")
