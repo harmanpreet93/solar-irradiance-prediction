@@ -43,7 +43,6 @@ def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
         k_pred, y_pred = model(x_train, training=True)
         night_flag = tf.squeeze(x_train[3])
         k_train = tf.squeeze(k_train)
-        # print("**Harman: ", k_pred.shape, k_train.shape, y_pred.shape, y_train.shape, night_flag.shape)
         k_pred, k_train, y_pred, y_train, weight = \
             mask_nighttime_predictions(k_pred, k_train, y_pred, y_train, night_flag=night_flag)
         loss = loss_fn(k_train, k_pred)
