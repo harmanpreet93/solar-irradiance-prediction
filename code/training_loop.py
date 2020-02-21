@@ -1,6 +1,7 @@
 import tqdm
 import typing
 import datetime
+import numpy as np
 import pandas as pd
 import tensorflow as tf
 from data_loader import DataLoader
@@ -53,6 +54,28 @@ def test_step(model, loss_fn, max_k_ghi, x_test, y_test):
     return loss, y_test, y_pred, weight
 
 
+def manage_model_checkpoints(optimizer, model, user_config):
+    ckpt = tf.train.Checkpoint(step=tf.Variable(0), optimizer=optimizer, net=model)
+    manager = tf.train.CheckpointManager(ckpt, './model/tf_ckpts', max_to_keep=3)
+
+    if user_config["ignore_checkpoints"]:
+        print("Model checkpoints ignored; Initializing from scratch.")
+        early_stop_metric = np.inf
+        np.save(user_config["model_info"], [early_stop_metric])
+    else:
+        ckpt.restore(manager.latest_checkpoint)
+        if manager.latest_checkpoint:
+            print("Restored model from {}".format(manager.latest_checkpoint))
+            early_stop_metric = np.load(user_config["model_info"])[0]
+        else:
+            print("No checkpoint found; Initializing from scratch.")
+            early_stop_metric = np.inf
+
+    start_epoch = ckpt.step.numpy()
+
+    return manager, ckpt, early_stop_metric, start_epoch
+
+
 @do_code_profiling
 def train(
         MainModel,
@@ -74,9 +97,6 @@ def train(
     val_data_loader = Val_DL.get_data_loader()
     model = MainModel(tr_stations, tr_time_offsets, user_config)
 
-    # Set up tensorboard logging
-    train_summary_writer, test_summary_writer = get_summary_writer()
-
     # set hyper-parameters
     nb_epoch = user_config["nb_epoch"]
     learning_rate = user_config["learning_rate"]
@@ -88,15 +108,20 @@ def train(
     # Objective/Loss function: MSE Loss
     loss_fn = tf.keras.losses.MeanSquaredError()
 
-    # Metrics to track:
+    # Set up tensorboard metric logging
+    train_summary_writer, test_summary_writer = get_summary_writer()
     train_loss = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
     test_loss = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
     train_rmse = tf.keras.metrics.RootMeanSquaredError()
     test_rmse = tf.keras.metrics.RootMeanSquaredError()
 
+    # Checkpoint management (for model save/restore)
+    manager, ckpt, early_stop_metric, start_epoch = manage_model_checkpoints(optimizer, model, user_config)
+
     # training starts here
     with tqdm.tqdm("training", total=nb_epoch) as pbar:
-        for epoch in range(nb_epoch):
+        pbar.update(start_epoch)
+        for epoch in range(start_epoch, nb_epoch):
 
             # Train the model using the training set for one epoch
             for minibatch in train_data_loader:
@@ -131,6 +156,17 @@ def train(
                 tf.summary.scalar('loss', test_loss.result(), step=epoch)
                 tf.summary.scalar('rmse', test_rmse.result(), step=epoch)
 
+            # Create a model checkpoint after each epoch
+            ckpt.step.assign_add(1)
+            save_path = manager.save()
+            logger.debug("Saved checkpoint for epoch {}: {}".format(int(ckpt.step), save_path))
+
+            # Save the best model
+            if test_loss.result() < early_stop_metric:
+                early_stop_metric = test_loss.result()
+                model.save_weights("model/my_model", save_format="tf")
+                np.save(user_config["model_info"], [early_stop_metric.numpy()])
+
             logger.debug(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
                 .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
@@ -143,6 +179,3 @@ def train(
             test_rmse.reset_states()
 
             pbar.update(1)
-
-    # save model weights to file
-    model.save_weights("model/my_model", save_format="tf")
