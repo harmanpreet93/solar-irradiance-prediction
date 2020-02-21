@@ -43,7 +43,7 @@ class MainModel(tf.keras.Model):
         input_seq_length = self.config["input_seq_length"]
 
         self.conv3d_1 = tf.keras.layers.Conv3D(
-            filters=16,
+            filters=self.config["nb_feature_maps"],
             kernel_size=(input_seq_length, 6, 6),
             input_shape=(input_seq_length, image_size_m, image_size_n, nb_channels),
             strides=(1, 2, 2),
@@ -54,7 +54,7 @@ class MainModel(tf.keras.Model):
             strides=(2, 2)
         )
         self.conv2d_3 = tf.keras.layers.Conv2D(
-            filters=16,
+            filters=self.config["nb_feature_maps"],
             kernel_size=(5, 5),
             strides=(2, 2),
             activation=tf.nn.relu
@@ -65,11 +65,11 @@ class MainModel(tf.keras.Model):
         )
         self.flatten = tf.keras.layers.Flatten()
         self.dense_5 = tf.keras.layers.Dense(
-            256,
+            self.config["nb_dense_units"],
             activation=tf.nn.relu
         )
         self.dense_6 = tf.keras.layers.Dense(
-            256,
+            self.config["nb_dense_units"],
             activation=tf.nn.relu
         )
         # Output layer

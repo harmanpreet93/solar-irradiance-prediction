@@ -1,11 +1,15 @@
+import os
 import tqdm
+import json
+import datetime
 import typing
 import datetime
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from data_loader import DataLoader
-from model_logging import get_logger, get_summary_writer, do_code_profiling
+from model_logging import get_logger, get_summary_writers, do_code_profiling
+from tensorboard.plugins.hparams import api as hp
 
 logger = get_logger()
 
@@ -54,6 +58,21 @@ def test_step(model, loss_fn, max_k_ghi, x_test, y_test):
     return loss, y_test, y_pred, weight
 
 
+def manage_model_start_time(ignore_checkpoints):
+    model_metadata_path = 'model/model_metadata.json'
+    if os.path.isfile(model_metadata_path) and not ignore_checkpoints:
+        # Metadata found; log training with previous timestamp
+        with open(model_metadata_path, "r") as fd:
+            model_train_start_time = json.load(fd)["model_train_start_time"]
+            return model_train_start_time
+
+    # No file found; log training with current timestamp
+    model_train_start_time = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    with open(model_metadata_path, 'w') as outfile:
+        json.dump({"model_train_start_time": model_train_start_time}, outfile, indent=2)
+    return model_train_start_time
+
+
 def manage_model_checkpoints(optimizer, model, user_config):
     ckpt = tf.train.Checkpoint(step=tf.Variable(0), optimizer=optimizer, net=model)
     manager = tf.train.CheckpointManager(ckpt, './model/tf_ckpts', max_to_keep=3)
@@ -62,18 +81,21 @@ def manage_model_checkpoints(optimizer, model, user_config):
         print("Model checkpoints ignored; Initializing from scratch.")
         early_stop_metric = np.inf
         np.save(user_config["model_info"], [early_stop_metric])
+        model_train_start_time = manage_model_start_time(ignore_checkpoints=True)
     else:
         ckpt.restore(manager.latest_checkpoint)
         if manager.latest_checkpoint:
             print("Restored model from {}".format(manager.latest_checkpoint))
+            model_train_start_time = manage_model_start_time(ignore_checkpoints=False)
             early_stop_metric = np.load(user_config["model_info"])[0]
         else:
             print("No checkpoint found; Initializing from scratch.")
+            model_train_start_time = manage_model_start_time(ignore_checkpoints=True)
             early_stop_metric = np.inf
 
     start_epoch = ckpt.step.numpy()
 
-    return manager, ckpt, early_stop_metric, start_epoch
+    return manager, ckpt, early_stop_metric, start_epoch, model_train_start_time
 
 
 @do_code_profiling
@@ -108,15 +130,29 @@ def train(
     # Objective/Loss function: MSE Loss
     loss_fn = tf.keras.losses.MeanSquaredError()
 
-    # Set up tensorboard metric logging
-    train_summary_writer, test_summary_writer = get_summary_writer()
+    # Define tensorboard metrics
     train_loss = tf.keras.metrics.Mean('train_loss', dtype=tf.float32)
     test_loss = tf.keras.metrics.Mean('test_loss', dtype=tf.float32)
     train_rmse = tf.keras.metrics.RootMeanSquaredError()
     test_rmse = tf.keras.metrics.RootMeanSquaredError()
 
     # Checkpoint management (for model save/restore)
-    manager, ckpt, early_stop_metric, start_epoch = manage_model_checkpoints(optimizer, model, user_config)
+    manager, ckpt, early_stop_metric, start_epoch, start_time = manage_model_checkpoints(optimizer, model, user_config)
+
+    # Get tensorboard file writers
+    train_summary_writer, test_summary_writer, hparam_summary_writer = get_summary_writers(start_time)
+
+    # Log hyperparameters
+    with hparam_summary_writer.as_default():
+        hp.hparams({
+            'nb_epoch': nb_epoch,
+            'learning_rate': learning_rate,
+            'max_k_ghi': max_k_ghi,
+            'batch_size': user_config["batch_size"],
+            'input_seq_length': user_config["input_seq_length"],
+            'nb_feature_maps': user_config["nb_feature_maps"],
+            'nb_dense_units': user_config["nb_dense_units"],
+        })
 
     # training starts here
     with tqdm.tqdm("training", total=nb_epoch) as pbar:
@@ -155,6 +191,10 @@ def train(
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=epoch)
                 tf.summary.scalar('rmse', test_rmse.result(), step=epoch)
+
+            with hparam_summary_writer.as_default():
+                tf.summary.scalar("val_loss", test_loss.result(), step=epoch)
+                tf.summary.scalar("val_rmse", test_rmse.result(), step=epoch)
 
             # Create a model checkpoint after each epoch
             ckpt.step.assign_add(1)
