@@ -80,14 +80,12 @@ class DataLoader():
         )
         return image
 
-    def get_nighttime_flags(self, batch_of_datetimes):
-        batch_size = len(batch_of_datetimes)
+    def get_nighttime_flags(self, batch_size):
         # TODO: Return real nighttime flags; assume no nighttime values for now
         return np.zeros(shape=(batch_size, 4), dtype=bool)
 
-    def get_onehot_station_id(self, batch_of_datetimes):
+    def get_onehot_station_id(self, batch_size):
         # TODO: Return onehot-encoded station ids
-        batch_size = len(batch_of_datetimes)
         stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
         station_ids = np.zeros(shape=(batch_size, len(stations)))
         station_ids[:, -1] = 1.0
@@ -99,9 +97,9 @@ class DataLoader():
             f_path = os.path.join(self.data_folder, file)
 
             with h5py.File(f_path, 'r') as h5_data:
-                images = h5_data["images"]
-                true_GHIs = h5_data["GHI"]
-                clearsky_GHIs = h5_data["clearsky_GHI"]
+                images = np.array(h5_data["images"])
+                true_GHIs = np.array(h5_data["GHI"])
+                clearsky_GHIs = np.array(h5_data["clearsky_GHI"])
                 night_flags = self.get_nighttime_flags(len(true_GHIs))
                 station_id_onehot = self.get_onehot_station_id(len(true_GHIs))
 
