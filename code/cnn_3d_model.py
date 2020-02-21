@@ -46,7 +46,8 @@ class MainModel(tf.keras.Model):
             filters=16,
             kernel_size=(input_seq_length, 6, 6),
             input_shape=(input_seq_length, image_size_m, image_size_n, nb_channels),
-            strides=(1, 2, 2)
+            strides=(1, 2, 2),
+            activation=tf.nn.relu
         )
         self.pool_2 = tf.keras.layers.MaxPool2D(
             pool_size=(2, 2),
@@ -55,7 +56,8 @@ class MainModel(tf.keras.Model):
         self.conv2d_3 = tf.keras.layers.Conv2D(
             filters=16,
             kernel_size=(5, 5),
-            strides=(2, 2)
+            strides=(2, 2),
+            activation=tf.nn.relu
         )
         self.pool_4 = tf.keras.layers.MaxPool2D(
             pool_size=(2, 2),
