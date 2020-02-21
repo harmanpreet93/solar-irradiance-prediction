@@ -43,7 +43,6 @@ def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
         k_pred, y_pred = model(x_train, training=True)
         night_flag = tf.squeeze(x_train[3])
         k_train = tf.squeeze(k_train)
-        # print("**Harman: ", k_pred.shape, k_train.shape, y_pred.shape, y_train.shape, night_flag.shape)
         k_pred, k_train, y_pred, y_train, weight = \
             mask_nighttime_predictions(k_pred, k_train, y_pred, y_train, night_flag=night_flag)
         loss = loss_fn(k_train, k_pred)
@@ -118,8 +117,22 @@ def train(
     """Trains and saves the model to file"""
 
     # Import the training and validation data loaders, import the model
-    Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config, data_folder="data/train_crops")
-    Val_DL = DataLoader(dataframe, val_datetimes, val_stations, val_time_offsets, user_config,  data_folder="data/val_crops")
+    Train_DL = DataLoader(
+        dataframe,
+        tr_datetimes,
+        tr_stations,
+        tr_time_offsets,
+        user_config,
+        data_folder=user_config["train_data_folder"]
+    )
+    Val_DL = DataLoader(
+        dataframe,
+        val_datetimes,
+        val_stations,
+        val_time_offsets,
+        user_config,
+        data_folder=user_config["val_data_folder"]
+    )
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
     model = MainModel(tr_stations, tr_time_offsets, user_config)

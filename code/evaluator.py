@@ -58,7 +58,7 @@ def prepare_dataloader(
     # WE ARE PROVIDING YOU WITH A DUMMY DATA GENERATOR FOR DEMONSTRATION PURPOSES.
     # MODIFY EVERYTHING IN IN THIS BLOCK AS YOU SEE FIT
 
-    DL = DataLoader(dataframe, target_datetimes, stations, target_time_offsets, config)
+    DL = DataLoader(dataframe, target_datetimes, stations, target_time_offsets, config, data_folder="data/val_crops")
     data_loader = DL.get_data_loader()
 
     # MODIFY ABOVE
