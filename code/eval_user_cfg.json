@@ -16,7 +16,7 @@
   "input_seq_length":3,
   "nb_channels":5,
 
-  "code_profiling_enabled":true,
+  "code_profiling_enabled":false,
 
   "dataframe_path": "data/catalog.helios.public.20100101-20160101.pkl",
   "start_bound_train": "2010-01-01",
