@@ -25,6 +25,6 @@
   "end_bound_val": "2016-01-01",
   "delta_time": "-30 min",
   
-  "ignore_checkpoints":true,
+  "ignore_checkpoints":false,
   "model_info": "model/training_info.npy"
 }
