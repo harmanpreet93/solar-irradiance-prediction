@@ -5,7 +5,8 @@ from model_logging import get_logger
 import tensorflow as tf
 import pandas as pd
 import numpy as np
-
+import os
+import h5py
 
 class DataLoader():
 
@@ -16,6 +17,7 @@ class DataLoader():
         stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
         target_time_offsets: typing.List[datetime.timedelta],
         config: typing.Dict[typing.AnyStr, typing.Any],
+        data_folder: typing.AnyStr
     ):
         """
         Copy-paste from evaluator.py:
@@ -35,6 +37,7 @@ class DataLoader():
         self.stations = list(stations.keys())
         self.config = config
         self.target_time_offsets = target_time_offsets
+        self.data_folder = data_folder
         self.initialize()
 
     def initialize(self):
@@ -42,6 +45,7 @@ class DataLoader():
         self.logger.debug("Initialize start")
         self.test_station = self.stations[0]
         self.output_seq_len = len(self.target_time_offsets)
+        self.data_files_list = os.listdir(self.data_folder)
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
             output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32, tf.float32)
@@ -90,6 +94,21 @@ class DataLoader():
         return station_ids
 
     def data_generator_fn(self):
+
+        for file in self.data_files_list:
+            f_path = os.path.join(self.data_folder, file)
+
+            with h5py.File(f_path, 'r') as h5_data:
+                images = h5_data["images"]
+                true_GHIs = h5_data["GHI"]
+                clearsky_GHIs = h5_data["clearsky_GHI"]
+                night_flags = self.get_nighttime_flags(len(true_GHIs))
+                station_id_onehot = self.get_onehot_station_id(len(true_GHIs))
+
+                yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, true_GHIs
+
+
+    def data_generator_fn_old(self):
         batch_size = self.config["batch_size"]
         for station_id in self.stations:
             for i in range(0, len(self.target_datetimes), batch_size):

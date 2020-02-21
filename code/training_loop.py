@@ -37,8 +37,11 @@ def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
     k_train = ghi_to_k(max_k_ghi, true_ghi=y_train, clearsky_ghi=x_train[1])
     with tf.GradientTape() as tape:
         k_pred, y_pred = model(x_train, training=True)
+        night_flag = tf.squeeze(x_train[3])
+        k_train = tf.squeeze(k_train)
+        print("**Harman: ", k_pred.shape, k_train.shape, y_pred.shape, y_train.shape, night_flag.shape)
         k_pred, k_train, y_pred, y_train, weight = \
-            mask_nighttime_predictions(k_pred, k_train, y_pred, y_train, night_flag=x_train[3])
+            mask_nighttime_predictions(k_pred, k_train, y_pred, y_train, night_flag=night_flag)
         loss = loss_fn(k_train, k_pred)
     gradient = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradient, model.trainable_variables))
@@ -48,8 +51,10 @@ def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
 def test_step(model, loss_fn, max_k_ghi, x_test, y_test):
     k_test = ghi_to_k(max_k_ghi, true_ghi=y_test, clearsky_ghi=x_test[1])
     k_pred, y_pred = model(x_test)
+    night_flag = tf.squeeze(x_test[3])
+    k_test = tf.squeeze(k_test)
     y_pred, y_test, k_pred, k_test, weight = \
-        mask_nighttime_predictions(y_pred, y_test, k_pred, k_test, night_flag=x_test[3])
+        mask_nighttime_predictions(y_pred, y_test, k_pred, k_test, night_flag=night_flag)
     loss = loss_fn(k_test, k_pred)
     return loss, y_test, y_pred, weight
 
@@ -91,8 +96,8 @@ def train(
     """Trains and saves the model to file"""
 
     # Import the training and validation data loaders, import the model
-    Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config)
-    Val_DL = DataLoader(dataframe, val_datetimes, val_stations, val_time_offsets, user_config)
+    Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config, data_folder="../data/train_crops")
+    Val_DL = DataLoader(dataframe, val_datetimes, val_stations, val_time_offsets, user_config,  data_folder="../data/val_crops")
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
     model = MainModel(tr_stations, tr_time_offsets, user_config)

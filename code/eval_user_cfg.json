@@ -2,7 +2,7 @@
   "model_file": "model/my_model.index",
   "target_model":"3d_cnn_model",
 
-  "batch_size":32,
+  "batch_size":1,
   "learning_rate":0.001,
   "nb_epoch":10,
   "max_k_ghi":1.2,
