@@ -25,6 +25,9 @@
   "end_bound_val": "2016-01-01",
   "delta_time": "-30 min",
   
-  "ignore_checkpoints":false,
-  "model_info": "model/training_info.npy"
+  "ignore_checkpoints":true,
+  "model_info": "model/training_info.npy",
+
+  "train_data_folder": "data/train_crops",
+  "val_data_folder": "data/val_crops"
 }

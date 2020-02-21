@@ -117,8 +117,22 @@ def train(
     """Trains and saves the model to file"""
 
     # Import the training and validation data loaders, import the model
-    Train_DL = DataLoader(dataframe, tr_datetimes, tr_stations, tr_time_offsets, user_config, data_folder="data/train_crops")
-    Val_DL = DataLoader(dataframe, val_datetimes, val_stations, val_time_offsets, user_config,  data_folder="data/val_crops")
+    Train_DL = DataLoader(
+        dataframe,
+        tr_datetimes,
+        tr_stations,
+        tr_time_offsets,
+        user_config,
+        data_folder=user_config["train_data_folder"]
+    )
+    Val_DL = DataLoader(
+        dataframe,
+        val_datetimes,
+        val_stations,
+        val_time_offsets,
+        user_config,
+        data_folder=user_config["val_data_folder"]
+    )
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
     model = MainModel(tr_stations, tr_time_offsets, user_config)
