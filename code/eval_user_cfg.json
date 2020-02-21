@@ -19,5 +19,12 @@
   "code_profiling_enabled":true,
 
   "ignore_checkpoints":true,
-  "model_info": "model/training_info.npy"
+  "model_info": "model/training_info.npy",
+
+  "dataframe_path": "data/catalog.helios.public.20100101-20160101.pkl",
+  "start_bound_train": "2010-01-01",
+  "end_bound_train": "2015-01-01",
+  "start_bound_val": "2015-01-01",
+  "end_bound_val": "2016-01-01",
+  "delta_time": "-30 min"
 }
