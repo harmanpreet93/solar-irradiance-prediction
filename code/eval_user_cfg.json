@@ -1,10 +1,12 @@
 {
   "model_file": "model/my_model.index",
   "target_model":"3d_cnn_model",
+  "nb_feature_maps":16,
+  "nb_dense_units":256,
 
   "batch_size":1,
   "learning_rate":0.001,
-  "nb_epoch":10,
+  "nb_epoch":20,
   "max_k_ghi":1.2,
   
   "image_size_m":82,

@@ -23,13 +23,15 @@ def get_logger():
     return logger
 
 
-def get_summary_writer():
-    current_time = datetime.now().strftime("%Y%m%d-%H%M%S")
+def get_summary_writers(current_time):
     train_log_dir = 'log/gradient_tape/' + current_time + '/train'
     test_log_dir = 'log/gradient_tape/' + current_time + '/test'
+    hparam_log_dir = 'log/hparam_tuning/' + current_time + '/hparam'
+
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
     test_summary_writer = tf.summary.create_file_writer(test_log_dir)
-    return train_summary_writer, test_summary_writer
+    hparam_summary_writer = tf.summary.create_file_writer(hparam_log_dir)
+    return train_summary_writer, test_summary_writer, hparam_summary_writer
 
 
 def do_code_profiling(function):
