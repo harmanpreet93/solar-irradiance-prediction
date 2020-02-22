@@ -54,6 +54,8 @@ def select_model(user_config):
         from clearsky_model import MainModel
     elif user_config["target_model"] == "3d_cnn_model":
         from cnn_3d_model import MainModel
+    elif user_config["target_model"] == "large_3d_cnn_model":
+        from large_3d_cnn_model import MainModel
     else:
         raise Exception("Unknown model")
 
