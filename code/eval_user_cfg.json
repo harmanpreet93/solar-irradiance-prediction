@@ -8,7 +8,7 @@
   "learning_rate":0.001,
   "nb_epoch":20,
   "max_k_ghi":1.2,
-  
+
   "image_size_m":82,
   "image_size_n":82,
   "image_offset_m":0,
@@ -16,7 +16,7 @@
   "input_seq_length":3,
   "nb_channels":5,
 
-  "code_profiling_enabled":false,
+  "code_profiling_enabled":true,
 
   "dataframe_path": "data/catalog.helios.public.20100101-20160101.pkl",
   "start_bound_train": "2010-01-01",
@@ -24,10 +24,9 @@
   "start_bound_val": "2015-01-01",
   "end_bound_val": "2016-01-01",
   "delta_time": "-30 min",
-  
   "ignore_checkpoints":true,
   "model_info": "model/training_info.npy",
 
-  "train_data_folder": "data/train_crops",
-  "val_data_folder": "data/val_crops"
+  "train_data_folder": "$SLURM_TMPDIR/train_crops",
+  "val_data_folder": "$SLURM_TMPDIR/val_crops"
 }

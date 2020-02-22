@@ -123,7 +123,7 @@ def train(
         tr_stations,
         tr_time_offsets,
         user_config,
-        data_folder=user_config["train_data_folder"]
+        data_folder=os.path.expandvars(user_config["train_data_folder"])
     )
     Val_DL = DataLoader(
         dataframe,
@@ -131,7 +131,7 @@ def train(
         val_stations,
         val_time_offsets,
         user_config,
-        data_folder=user_config["val_data_folder"]
+        data_folder=os.path.expandvars(user_config["val_data_folder"])
     )
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
