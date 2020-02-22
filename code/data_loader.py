@@ -92,13 +92,6 @@ class DataLoader():
         station_ids[:, -1] = 1.0
         return station_ids
 
-    def normalize_images(self, images):
-        means = [0.32, 267.8, 234.5, 255.3, 242.5]
-        stds = [0.217, 13.7, 8.9, 19.0, 14.1]
-        for channel, u, sig in zip(range(5), means, stds):
-            images[:, :, :, :, channel] = (images[:, :, :, :, channel] - u) / sig
-        return images
-
     def data_generator_fn(self):
 
         for file in self.data_files_list:
@@ -106,7 +99,6 @@ class DataLoader():
 
             with h5py.File(f_path, 'r') as h5_data:
                 images = np.array(h5_data["images"])
-                images = self.normalize_images(images)
                 true_GHIs = np.array(h5_data["GHI"])
                 clearsky_GHIs = np.array(h5_data["clearsky_GHI"])
                 night_flags = self.get_nighttime_flags(len(true_GHIs))
