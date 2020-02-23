@@ -53,7 +53,7 @@ def load_df(user_config):
 def get_datetimes_with_past_im_avail(candidate_datetimes, user_config):
     delta_time = user_config["delta_time"]
     nb_images_for_training = 3
-    timedeltas = pd.timedelta_range(start=delta_time, periods=(nb_images_for_training-1), freq=delta_time)
+    timedeltas = pd.timedelta_range(start=delta_time, periods=(nb_images_for_training - 1), freq=delta_time)
 
     final_datetimes = []
     for candidate_datetime in candidate_datetimes:

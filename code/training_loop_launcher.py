@@ -65,7 +65,6 @@ def main(
         val_config_path: typing.AnyStr,
         user_config_path: typing.Optional[typing.AnyStr] = None,
 ) -> None:
-
     user_config, train_config, val_config, dataframe = \
         load_files(user_config_path, train_config_path, val_config_path)
 

@@ -1,5 +1,8 @@
 import datetime
 import typing
+
+from numpy.core._multiarray_umath import ndarray
+
 from model_logging import get_logger
 
 import tensorflow as tf
@@ -7,7 +10,7 @@ import pandas as pd
 import numpy as np
 import os
 import h5py
-
+from sklearn.preprocessing import OneHotEncoder
 
 class DataLoader():
 
@@ -47,10 +50,16 @@ class DataLoader():
         self.test_station = self.stations[0]
         self.output_seq_len = len(self.target_time_offsets)
         self.data_files_list = os.listdir(self.data_folder)
+
+        stations = np.array([b"BND", b"TBL", b"DRA", b"FPK", b"GWN", b"PSU", b"SXF"])
+        self.encoder = OneHotEncoder(sparse=False)
+        stations = stations.reshape(len(stations), 1)
+        self.encoder.fit(stations)
+
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
             output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32, tf.float32)
-        )
+        ).prefetch(tf.data.experimental.AUTOTUNE)
 
     def get_ghi_values(self, batch_of_datetimes, station_id):
         batch_size = len(batch_of_datetimes)
@@ -85,19 +94,13 @@ class DataLoader():
         # TODO: Return real nighttime flags; assume no nighttime values for now
         return np.zeros(shape=(batch_size, 4), dtype=bool)
 
-    def get_onehot_station_id(self, batch_size):
+    def get_onehot_station_id(self, station_ids):
         # TODO: Return onehot-encoded station ids
-        stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
-        station_ids = np.zeros(shape=(batch_size, len(stations)))
-        station_ids[:, -1] = 1.0
-        return station_ids
+        # stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
+        # station_ids = np.zeros(shape=(batch_size, len(stations)))
+        # station_ids[:, -1] = 1.0
 
-    def normalize_images(self, images):
-        means = [0.32, 267.8, 234.5, 255.3, 242.5]
-        stds = [0.217, 13.7, 8.9, 19.0, 14.1]
-        for channel, u, sig in zip(range(5), means, stds):
-            images[:, :, :, :, channel] = (images[:, :, :, :, channel] - u) / sig
-        return images
+        return self.encoder.transform(station_ids)
 
     def data_generator_fn(self):
 
@@ -106,11 +109,11 @@ class DataLoader():
 
             with h5py.File(f_path, 'r') as h5_data:
                 images = np.array(h5_data["images"])
-                images = self.normalize_images(images)
-                true_GHIs = np.array(h5_data["GHI"])
+                true_GHIs: ndarray = np.array(h5_data["GHI"])
                 clearsky_GHIs = np.array(h5_data["clearsky_GHI"])
+                station_ids = np.array(h5_data["station_id"])
                 night_flags = self.get_nighttime_flags(len(true_GHIs))
-                station_id_onehot = self.get_onehot_station_id(len(true_GHIs))
+                station_id_onehot = self.get_onehot_station_id(station_ids)
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, true_GHIs
 

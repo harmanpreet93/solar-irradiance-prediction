@@ -28,10 +28,16 @@ def get_summary_writers(current_time):
     test_log_dir = 'log/gradient_tape/' + current_time + '/test'
     hparam_log_dir = 'log/hparam_tuning/' + current_time + '/hparam'
 
+    train_log_dir_steps = 'log/gradient_tape/' + current_time + '/train_steps'
+    test_log_dir_steps = 'log/gradient_tape/' + current_time + '/test_steps'
+
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
     test_summary_writer = tf.summary.create_file_writer(test_log_dir)
     hparam_summary_writer = tf.summary.create_file_writer(hparam_log_dir)
-    return train_summary_writer, test_summary_writer, hparam_summary_writer
+    train_summary_writer_steps = tf.summary.create_file_writer(train_log_dir_steps)
+    test_summary_writer_steps = tf.summary.create_file_writer(test_log_dir_steps)
+
+    return train_summary_writer, test_summary_writer, hparam_summary_writer, train_summary_writer_steps, test_summary_writer_steps
 
 
 def do_code_profiling(function):

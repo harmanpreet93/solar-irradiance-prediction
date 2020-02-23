@@ -5,14 +5,13 @@ import tensorflow as tf
 
 
 class MainModel(tf.keras.Model):
-
     TRAINING_REQUIRED = True
 
     def __init__(
-        self,
-        stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
-        target_time_offsets: typing.List[datetime.timedelta],
-        config: typing.Dict[typing.AnyStr, typing.Any],
+            self,
+            stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
+            target_time_offsets: typing.List[datetime.timedelta],
+            config: typing.Dict[typing.AnyStr, typing.Any],
     ):
         """
         Args:

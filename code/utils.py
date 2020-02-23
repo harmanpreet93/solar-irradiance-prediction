@@ -18,9 +18,11 @@ import tqdm
 
 def get_label_color_mapping(idx):
     """Returns the PASCAL VOC color triplet for a given label index."""
+
     # https://gist.github.com/wllhf/a4533e0adebe57e3ed06d4b50c8419ae
     def bitget(byteval, ch):
         return (byteval & (1 << ch)) != 0
+
     r = g = b = 0
     for j in range(8):
         r = r | (bitget(idx, 0) << 7 - j)
@@ -480,11 +482,13 @@ def viz_predictions(
     day_count = int(math.ceil((end_bound - start_bound) / time_window))
     clearsky_ghi_data = np.full((day_count, len(stations), sample_count), fill_value=float("nan"), dtype=np.float32)
     station_ghi_data = np.full((day_count, len(stations), sample_count), fill_value=float("nan"), dtype=np.float32)
-    pred_ghi_data = np.full((day_count, len(stations), pred_horiz, sample_count), fill_value=float("nan"), dtype=np.float32)
+    pred_ghi_data = np.full((day_count, len(stations), pred_horiz, sample_count), fill_value=float("nan"),
+                            dtype=np.float32)
     days_range = pd.date_range(start_bound, end_bound, freq=time_window, closed="left")
     for day_idx, day_start in enumerate(tqdm.tqdm(days_range, desc="preparing daytime GHI intervals")):
         window_start, window_end = day_start - time_overlap, day_start + time_window + time_overlap
-        sample_start, sample_end = (window_start - start_bound) // time_sample, (window_end - start_bound) // time_sample
+        sample_start, sample_end = (window_start - start_bound) // time_sample, (
+                window_end - start_bound) // time_sample
         for sample_iter_idx, sample_idx in enumerate(range(sample_start, sample_end + 1)):
             if sample_idx < 0 or sample_idx >= len(dataframe.index):
                 continue
