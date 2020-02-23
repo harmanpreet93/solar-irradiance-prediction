@@ -6,7 +6,7 @@
   "nb_dense_units": 64,
   "batch_size": 1,
   "learning_rate": 0.01,
-  "nb_epoch": 5,
+  "nb_epoch": 15,
   "max_k_ghi": 1.2,
   "image_size_m": 82,
   "image_size_n": 82,

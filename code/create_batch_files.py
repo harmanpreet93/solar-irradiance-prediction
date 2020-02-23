@@ -76,7 +76,8 @@ def save_image_and_batch(dir_path,
                          image_data,
                          true_ghis_data,
                          clear_sky_ghis_data,
-                         station_ids):
+                         station_ids,
+                         datetime_sequence):
     file_name = file_name + ".hdf5"
     path = os.path.join(dir_path, file_name)
     with h5py.File(path, 'w') as f:
@@ -85,7 +86,8 @@ def save_image_and_batch(dir_path,
         f.create_dataset("clearsky_GHI", shape=clear_sky_ghis_data.shape, dtype=np.float32, data=clear_sky_ghis_data)
         station_ids = [n.encode("ascii", "ignore") for n in station_ids]
         f.create_dataset("station_id", shape=(len(station_ids), 1), dtype='S10', data=station_ids)
-        # f.create_dataset("datetime_sequence", shape=datetime_sequence.shape, data=datetime_sequence)
+        datetime_sequence = [str(n).encode("ascii", "ignore") for n in datetime_sequence]
+        f.create_dataset("datetime_sequence", shape=len(datetime_sequence,1), dtype='S10', data=datetime_sequence)
 
 
 def get_channels(hdf5_path, hdf5_offset):
@@ -359,7 +361,8 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
                                  concat_images[:mini_batch_size],
                                  target_trueGHIs[:mini_batch_size],
                                  target_clearSkyGHIs[:mini_batch_size],
-                                 target_station_ids[:mini_batch_size])
+                                 target_station_ids[:mini_batch_size],
+                                 target_timestamps[:mini_batch_size])
 
             concat_images = np.array([])
             target_trueGHIs = np.array([])

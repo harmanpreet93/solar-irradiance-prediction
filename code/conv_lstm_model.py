@@ -65,10 +65,17 @@ class MainModel(tf.keras.Model):
         )
 
         self.flatten_5 = tf.keras.layers.Flatten()
-
         self.lstm_6 = tf.keras.layers.LSTM(units=128)
         self.dense_7 = tf.keras.layers.Dense(64, activation=tf.nn.relu)
         self.dense_8 = tf.keras.layers.Dense(4, activation=tf.nn.sigmoid)
+
+    def cnn_forward(self, img):
+        x = self.conv3d_1(img)
+        x = self.pool_2(x)
+        x = self.conv2d_3(x)
+        x = self.pool_4(x)
+        x = self.flatten_5(x)
+        return x
 
     def call(self, inputs):
         '''
@@ -85,23 +92,9 @@ class MainModel(tf.keras.Model):
         img2 = images[:, 1, :, :, :]
         img3 = images[:, 2, :, :, :]
 
-        x1 = self.conv3d_1(img1)
-        x1 = self.pool_2(x1)
-        x1 = self.conv2d_3(x1)
-        x1 = self.pool_4(x1)
-        x1 = self.flatten_5(x1)
-
-        x2 = self.conv3d_1(img2)
-        x2 = self.pool_2(x2)
-        x2 = self.conv2d_3(x2)
-        x2 = self.pool_4(x2)
-        x2 = self.flatten_5(x2)
-
-        x3 = self.conv3d_1(img3)
-        x3 = self.pool_2(x3)
-        x3 = self.conv2d_3(x3)
-        x3 = self.pool_4(x3)
-        x3 = self.flatten_5(x3)
+        x1 = self.cnn_forward(img1)
+        x2 = self.cnn_forward(img2)
+        x3 = self.cnn_forward(img3)
 
         # print(x1.shape)
         x = tf.stack([x1, x2, x3], axis=1)
