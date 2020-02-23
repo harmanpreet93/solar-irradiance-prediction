@@ -122,7 +122,10 @@ class MainModel(tf.keras.Model):
         # night_flags = inputs[3]
         station_id_onehot = (inputs[4])
 
-        assert not np.isnan(images).any()
+        # Refer to report for mean/std choices
+        normalized_clearsky_GHIs = (clearsky_GHIs - 454.5) / 293.9
+
+        # assert not np.isnan(images).any()
 
         x = self.conv3d_1(images)
         x = tf.squeeze(x)
@@ -136,9 +139,26 @@ class MainModel(tf.keras.Model):
         x = self.pool_9(x)
         x = self.flatten(x)
 
-        x = tf.concat((x, station_id_onehot), axis=1)
+        x = tf.nn.dropout(
+            x,
+            rate=self.config["dropout_rate"],
+            seed=None  # TODO: Seed with RNG
+        )
+        normalized_clearsky_GHIs = tf.nn.dropout(
+            normalized_clearsky_GHIs,
+            rate=self.config["dropout_rate_data"],
+            seed=None  # TODO: Seed with RNG
+        )
+        station_id_onehot = tf.nn.dropout(
+            station_id_onehot,
+            rate=self.config["dropout_rate_data"],
+            seed=None  # TODO: Seed with RNG
+        )
+        x = tf.concat((x, station_id_onehot, normalized_clearsky_GHIs), axis=1)
         x = self.dense_10(x)
+        x = tf.nn.dropout(x, rate=self.config["dropout_rate"], seed=None)
         x = self.dense_11(x)
+        x = tf.nn.dropout(x, rate=self.config["dropout_rate"], seed=None)
         k = self.dense_12(x)
 
         # assert not np.isnan(k).any()

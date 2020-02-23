@@ -37,7 +37,8 @@ def get_summary_writers(current_time):
     train_summary_writer_steps = tf.summary.create_file_writer(train_log_dir_steps)
     test_summary_writer_steps = tf.summary.create_file_writer(test_log_dir_steps)
 
-    return train_summary_writer, test_summary_writer, hparam_summary_writer, train_summary_writer_steps, test_summary_writer_steps
+    return train_summary_writer, test_summary_writer, hparam_summary_writer, \
+        train_summary_writer_steps, test_summary_writer_steps
 
 
 def do_code_profiling(function):

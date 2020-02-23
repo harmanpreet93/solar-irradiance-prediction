@@ -45,7 +45,6 @@ class DataLoader():
         self.data_folder = data_folder
         self.initialize()
 
-
     def initialize(self):
         self.logger = get_logger()
         self.logger.debug("Initialize start")

@@ -1,27 +1,34 @@
 {
   "model_file": "model/my_model.index",
-  "dataframe_path": "/project/cq-training-1/project1/teams/team08/data/catalog.helios.public.20100101-20160101.pkl",
-  "target_model": "conv_lstm_model",
-  "nb_feature_maps": 32,
-  "nb_dense_units": 64,
-  "batch_size": 1,
-  "learning_rate": 0.01,
-  "nb_epoch": 5,
-  "max_k_ghi": 1.2,
-  "image_size_m": 82,
-  "image_size_n": 82,
-  "image_offset_m": 0,
-  "image_offset_n": 0,
-  "input_seq_length": 3,
-  "nb_channels": 5,
-  "code_profiling_enabled": true,
+  "target_model":"large_3d_cnn_model",
+  "nb_feature_maps":64,
+  "nb_dense_units":1024,
+
+  "batch_size":1,
+  "learning_rate":0.001,
+  "nb_epoch":40,
+  "max_k_ghi":1.2,
+  "dropout_rate":0.25,
+  "dropout_rate_data":0.25,
+
+  "image_size_m":82,
+  "image_size_n":82,
+  "image_offset_m":0,
+  "image_offset_n":0,
+  "input_seq_length":3,
+  "nb_channels":5,
+
+  "code_profiling_enabled":false,
+
+  "dataframe_path": "../data/catalog.helios.public.20100101-20160101.pkl",
   "start_bound_train": "2010-01-01",
   "end_bound_train": "2015-01-01",
   "start_bound_val": "2015-01-01",
   "end_bound_val": "2016-01-01",
   "delta_time": "-30 min",
+
   "ignore_checkpoints": false,
-  "model_info": "model/training_info.npy",
-  "train_data_folder": "/project/cq-training-1/project1/teams/team08/data/train_crops",
-  "val_data_folder": "/project/cq-training-1/project1/teams/team08/data/val_crops"
+  "model_info": "../model/training_info.npy",
+  "train_data_folder": "../data/train_crops",
+  "val_data_folder": "../data/val_crops"
 }

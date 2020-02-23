@@ -80,7 +80,7 @@ def manage_model_start_time(ignore_checkpoints):
 
 def manage_model_checkpoints(optimizer, model, user_config):
     ckpt = tf.train.Checkpoint(step=tf.Variable(0), optimizer=optimizer, net=model)
-    manager = tf.train.CheckpointManager(ckpt, './model/tf_ckpts', max_to_keep=3)
+    manager = tf.train.CheckpointManager(ckpt, '../model/tf_ckpts', max_to_keep=3)
 
     if user_config["ignore_checkpoints"]:
         print("Model checkpoints ignored; Initializing from scratch.")
@@ -160,8 +160,8 @@ def train(
     manager, ckpt, early_stop_metric, start_epoch, start_time = manage_model_checkpoints(optimizer, model, user_config)
 
     # Get tensorboard file writers
-    train_summary_writer, test_summary_writer, hparam_summary_writer, train_step_writer, test_step_writer = get_summary_writers(
-        start_time)
+    train_summary_writer, test_summary_writer, hparam_summary_writer, train_step_writer, test_step_writer = \
+        get_summary_writers(start_time)
 
     # Log hyperparameters
     with hparam_summary_writer.as_default():
@@ -173,6 +173,8 @@ def train(
             'input_seq_length': user_config["input_seq_length"],
             'nb_feature_maps': user_config["nb_feature_maps"],
             'nb_dense_units': user_config["nb_dense_units"],
+            'dropout_rate': user_config["dropout_rate"],
+            'dropout_rate': user_config["dropout_rate_data"],
         })
 
     n_train_steps = len(glob.glob(user_config["train_data_folder"] + "/*hdf5"))
@@ -187,53 +189,47 @@ def train(
             current_val_steps_start_point = epoch * n_val_steps
 
             # Train the model using the training set for one epoch
-            with tqdm.tqdm("Train steps", total=n_train_steps) as train_pbar:
-                for i, minibatch in enumerate(train_data_loader):
-                    loss, y_train, y_pred, weight = train_step(
-                        model,
-                        optimizer,
-                        loss_fn,
-                        max_k_ghi,
-                        x_train=minibatch[:-1],
-                        y_train=minibatch[-1]
-                    )
-                    train_loss(loss, sample_weight=weight)
-                    train_rmse(y_train, y_pred, sample_weight=weight)
+            for i, minibatch in enumerate(train_data_loader):
+                loss, y_train, y_pred, weight = train_step(
+                    model,
+                    optimizer,
+                    loss_fn,
+                    max_k_ghi,
+                    x_train=minibatch[:-1],
+                    y_train=minibatch[-1]
+                )
+                train_loss(loss, sample_weight=weight)
+                train_rmse(y_train, y_pred, sample_weight=weight)
 
-                    train_pbar.update(1)
-
-                    if i % 10 == 0:
-                        with train_step_writer.as_default():
-                            tf.summary.scalar('train step loss', train_loss.result(),
-                                              step=current_train_steps_start_point + i)
-                            tf.summary.scalar('train step rmse', train_rmse.result(),
-                                              step=current_train_steps_start_point + i)
+                if i % 10 == 0:
+                    with train_step_writer.as_default():
+                        tf.summary.scalar('train step loss', train_loss.result(),
+                                          step=current_train_steps_start_point + i)
+                        tf.summary.scalar('train step rmse', train_rmse.result(),
+                                          step=current_train_steps_start_point + i)
 
             with train_summary_writer.as_default():
                 tf.summary.scalar('loss', train_loss.result(), step=epoch)
                 tf.summary.scalar('rmse', train_rmse.result(), step=epoch)
 
             # Evaluate model performance on the validation set after training for one epoch
-            with tqdm.tqdm("Validation steps", total=n_val_steps) as val_pbar:
-                for j, minibatch in enumerate(val_data_loader):
-                    loss, y_test, y_pred, weight = test_step(
-                        model,
-                        loss_fn,
-                        max_k_ghi,
-                        x_test=minibatch[:-1],
-                        y_test=minibatch[-1]
-                    )
-                    test_loss(loss, sample_weight=weight)
-                    test_rmse(y_test, y_pred, sample_weight=weight)
+            for j, minibatch in enumerate(val_data_loader):
+                loss, y_test, y_pred, weight = test_step(
+                    model,
+                    loss_fn,
+                    max_k_ghi,
+                    x_test=minibatch[:-1],
+                    y_test=minibatch[-1]
+                )
+                test_loss(loss, sample_weight=weight)
+                test_rmse(y_test, y_pred, sample_weight=weight)
 
-                    val_pbar.update(1)
-
-                    if j % 10 == 0:
-                        with test_step_writer.as_default():
-                            tf.summary.scalar('val step loss', test_loss.result(),
-                                              step=current_val_steps_start_point + j)
-                            tf.summary.scalar('val step rmse', test_rmse.result(),
-                                              step=current_val_steps_start_point + j)
+                if j % 10 == 0:
+                    with test_step_writer.as_default():
+                        tf.summary.scalar('val step loss', test_loss.result(),
+                                          step=current_val_steps_start_point + j)
+                        tf.summary.scalar('val step rmse', test_rmse.result(),
+                                          step=current_val_steps_start_point + j)
 
             with test_summary_writer.as_default():
                 tf.summary.scalar('loss', test_loss.result(), step=epoch)
@@ -251,16 +247,16 @@ def train(
             # Save the best model
             if test_loss.result() < early_stop_metric:
                 early_stop_metric = test_loss.result()
-                model.save_weights("model/my_model", save_format="tf")
+                model.save_weights("../model/my_model", save_format="tf")
                 np.save(user_config["model_info"], [early_stop_metric.numpy()])
 
             logger.debug(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
-                    .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
+                .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
             )
             logger.debug(
                 "Epoch {0}/{1}, Train RMSE = {2}, Val RMSE = {3}"
-                    .format(epoch + 1, nb_epoch, train_rmse.result(), test_rmse.result())
+                .format(epoch + 1, nb_epoch, train_rmse.result(), test_rmse.result())
             )
 
             # Reset metrics every epoch
