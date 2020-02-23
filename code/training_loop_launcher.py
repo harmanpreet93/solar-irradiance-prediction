@@ -58,8 +58,10 @@ def select_model(user_config):
         from large_3d_cnn_model import MainModel
     elif user_config["target_model"] == "time_distributed_lstm_model":
         from conv_lstm_time_distributed_model import MainModel
+    elif user_config["target_model"] == "conv_lstm_model":
+        from conv_lstm_model import MainModel
     else:
-        raise Exception("Unknown model")
+        raise Exception("Unknown model {}".format(user_config["target_model"]))
 
     return MainModel
 
