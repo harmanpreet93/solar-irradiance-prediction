@@ -12,16 +12,17 @@ import os
 import h5py
 from sklearn.preprocessing import OneHotEncoder
 
+
 class DataLoader():
 
     def __init__(
-        self,
-        dataframe: pd.DataFrame,
-        target_datetimes: typing.List[datetime.datetime],
-        stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
-        target_time_offsets: typing.List[datetime.timedelta],
-        config: typing.Dict[typing.AnyStr, typing.Any],
-        data_folder: typing.AnyStr
+            self,
+            dataframe: pd.DataFrame,
+            target_datetimes: typing.List[datetime.datetime],
+            stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
+            target_time_offsets: typing.List[datetime.timedelta],
+            config: typing.Dict[typing.AnyStr, typing.Any],
+            data_folder: typing.AnyStr
     ):
         """
         Copy-paste from evaluator.py:
@@ -43,6 +44,7 @@ class DataLoader():
         self.target_time_offsets = target_time_offsets
         self.data_folder = data_folder
         self.initialize()
+
 
     def initialize(self):
         self.logger = get_logger()
@@ -100,7 +102,6 @@ class DataLoader():
         # station_ids = np.zeros(shape=(batch_size, len(stations)))
         # station_ids[:, -1] = 1.0
         return self.encoder.transform(station_ids)
-
 
     def data_generator_fn(self):
 

@@ -56,6 +56,8 @@ def select_model(user_config):
         from cnn_3d_model import MainModel
     elif user_config["target_model"] == "large_3d_cnn_model":
         from large_3d_cnn_model import MainModel
+    elif user_config["target_model"] == "time_distributed_lstm_model":
+        from conv_lstm_time_distributed_model import MainModel
     else:
         raise Exception("Unknown model")
 
@@ -100,11 +102,14 @@ def main(
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("train_cfg_path", type=str,
-                        help="path to the JSON config file used to store training set parameters")
+                        help="path to the JSON config file used to store training set parameters",
+                        default="../train_cfg_local.json.json")
     parser.add_argument("val_cfg_path", type=str,
-                        help="path to the JSON config file used to store validation set parameters")
-    parser.add_argument("-u", "--user_cfg_path", type=str, default=None,
-                        help="path to the JSON config file used to store user model/dataloader parameters")
+                        help="path to the JSON config file used to store validation set parameters",
+                        default="../val_cfg_local.json")
+    parser.add_argument("-u", "--user_cfg_path", type=str,
+                        help="path to the JSON config file used to store user model/dataloader parameters",
+                        default="eval_user_cfg.json")
     return parser.parse_args()
 
 

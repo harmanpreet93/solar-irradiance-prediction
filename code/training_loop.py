@@ -64,7 +64,7 @@ def test_step(model, loss_fn, max_k_ghi, x_test, y_test):
 
 
 def manage_model_start_time(ignore_checkpoints):
-    model_metadata_path = 'model/model_metadata.json'
+    model_metadata_path = '../model/model_metadata.json'
     if os.path.isfile(model_metadata_path) and not ignore_checkpoints:
         # Metadata found; log training with previous timestamp
         with open(model_metadata_path, "r") as fd:

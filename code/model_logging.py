@@ -10,7 +10,7 @@ def get_logger():
     if not logger:
         for handler in logging.root.handlers[:]:
             logging.root.removeHandler(handler)
-        file_name = 'log/' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '.log'
+        file_name = '../log/' + datetime.now().strftime('%Y-%m-%d %H:%M:%S') + '.log'
         line_format = "%(asctime)s %(levelname)s: %(filename)s:%(funcName)s():%(lineno)d - %(message)s"
         logging.basicConfig(
             level=logging.DEBUG,
@@ -24,12 +24,12 @@ def get_logger():
 
 
 def get_summary_writers(current_time):
-    train_log_dir = 'log/gradient_tape/' + current_time + '/train'
-    test_log_dir = 'log/gradient_tape/' + current_time + '/test'
-    hparam_log_dir = 'log/hparam_tuning/' + current_time + '/hparam'
+    train_log_dir = '../log/gradient_tape/' + current_time + '/train'
+    test_log_dir = '../log/gradient_tape/' + current_time + '/test'
+    hparam_log_dir = '../log/hparam_tuning/' + current_time + '/hparam'
 
-    train_log_dir_steps = 'log/gradient_tape/' + current_time + '/train_steps'
-    test_log_dir_steps = 'log/gradient_tape/' + current_time + '/test_steps'
+    train_log_dir_steps = '../log/gradient_tape/' + current_time + '/train_steps'
+    test_log_dir_steps = '../log/gradient_tape/' + current_time + '/test_steps'
 
     train_summary_writer = tf.summary.create_file_writer(train_log_dir)
     test_summary_writer = tf.summary.create_file_writer(test_log_dir)
@@ -51,12 +51,13 @@ def do_code_profiling(function):
             x = function(*args, **kwargs)
 
             profile.disable()
-            profile.dump_stats("log/profiling_results.prof")
-            with open("log/profiling_results.txt", "w") as f:
-                ps = pstats.Stats("log/profiling_results.prof", stream=f)
+            profile.dump_stats("../log/profiling_results.prof")
+            with open("../log/profiling_results.txt", "w") as f:
+                ps = pstats.Stats("../log/profiling_results.prof", stream=f)
                 ps.sort_stats('cumulative')
                 ps.print_stats()
             return x
         else:
             return function(*args, **kwargs)
+
     return wrapper
