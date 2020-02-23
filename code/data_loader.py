@@ -99,8 +99,8 @@ class DataLoader():
         # stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
         # station_ids = np.zeros(shape=(batch_size, len(stations)))
         # station_ids[:, -1] = 1.0
-
         return self.encoder.transform(station_ids)
+
 
     def data_generator_fn(self):
 
