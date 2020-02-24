@@ -14,13 +14,10 @@ def interpolate_images(data):
     for i in range(0, data.shape[1]):
         col_values = data2[:, i]
         col_idx = np.arange(len(col_values))
-
         # idx of non-zero values
         idx = np.where(col_values != 0)
-
         # create instance of interp1d
         interp = interpolate.interp1d(col_idx[idx], col_values[idx], kind='linear')
-
         # interpolate column wise
         new_col_values = interp(col_idx)
         data2[:, i] = new_col_values
@@ -31,7 +28,6 @@ def handle_missing_img(hdf5_file, channel):
     # get LUT dataset
     ch_lut_name = channel + "_LUT"
     ch_lut = hdf5_file[ch_lut_name][()]
-
     # identify the offset of missing images
     missing_idx = np.where(np.equal(ch_lut, -1))
 
@@ -52,12 +48,8 @@ def handle_missing_img(hdf5_file, channel):
 def handle_missing_img2(vec1, vec2):
 
     # flatten and stack the images vertically
-    #print("vec1.shape", vec1.shape)
-    #print("vec2.shape", vec2.shape)
     missing_vec = np.ravel(np.zeros(vec1.shape))
     stack = np.vstack((np.ravel(vec1), missing_vec, np.ravel(vec2)))
-    #print("stack.shape=", stack.shape)
     interp_img = interpolate_images(stack)
-    #print("interp_img.shape=", interp_img.shape)
 
     return interp_img[1]
