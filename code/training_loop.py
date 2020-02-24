@@ -172,9 +172,7 @@ def train(
             'batch_size': user_config["batch_size"],
             'input_seq_length': user_config["input_seq_length"],
             'nb_feature_maps': user_config["nb_feature_maps"],
-            'nb_dense_units': user_config["nb_dense_units"],
-            'dropout_rate': user_config["dropout_rate"],
-            'dropout_rate_data': user_config["dropout_rate_data"],
+            'nb_dense_units': user_config["nb_dense_units"]
         })
 
     n_train_steps = len(glob.glob(user_config["train_data_folder"] + "/*hdf5"))
