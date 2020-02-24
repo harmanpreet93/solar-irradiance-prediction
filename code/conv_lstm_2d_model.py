@@ -137,7 +137,6 @@ class MainModel(tf.keras.Model):
         x = self.dropout(x)
         # print(x.shape)
         k = self.dense_8(x)
-
         assert not np.isnan(k).any()
 
         y = k_to_true_ghi(self.max_k_ghi, k, clearsky_GHIs)
