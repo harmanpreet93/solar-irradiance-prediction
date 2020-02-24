@@ -3,7 +3,9 @@
   "dataframe_path": "/project/cq-training-1/project1/teams/team08/data/catalog.helios.public.20100101-20160101.pkl",
   "target_model": "conv_lstm_model",
   "nb_feature_maps": 32,
-  "nb_dense_units": 64,
+  "nb_dense_units": 256,
+  "dropout_rate": 0.3,
+  "dropout_rate_data": 0.3,
   "batch_size": 1,
   "learning_rate": 0.01,
   "nb_epoch": 15,
@@ -12,7 +14,7 @@
   "image_size_n": 82,
   "image_offset_m": 0,
   "image_offset_n": 0,
-  "input_seq_length": 3,
+  "input_seq_length": 5,
   "nb_channels": 5,
   "code_profiling_enabled": true,
   "start_bound_train": "2010-01-01",
@@ -20,9 +22,25 @@
   "start_bound_val": "2015-01-01",
   "end_bound_val": "2016-01-01",
   "delta_time": "-30 min",
-
   "ignore_checkpoints": false,
   "model_info": "../model/training_info.npy",
-  "train_data_folder": "../data/train_crops",
-  "val_data_folder": "../data/val_crops"
+  "train_data_folder": "/project/cq-training-1/project1/teams/team08/data/train_crops",
+  "val_data_folder": "/project/cq-training-1/project1/teams/team08/data/val_crops",
+  "input_time_offsets": [
+    "P0DT0H0M0S",
+    "P0DT0H30M0S",
+    "P0DT1H0M0S",
+    "P0DT1H30M0S",
+    "P0DT2H0M0S",
+    "P0DT2H30M0S"
+  ],
+  "time_zone_mapping": {
+    "DRA": "P0DT8H0M0S",
+    "TBL": "P0DT7H0M0S",
+    "FPK": "P0DT7H0M0S",
+    "BND": "P0DT6H0M0S",
+    "GWN": "P0DT6H0M0S",
+    "SXF": "P0DT6H0M0S",
+    "PSU": "P0DT5H0M0S"
+  }
 }
