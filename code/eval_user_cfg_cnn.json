@@ -29,6 +29,6 @@
 
   "ignore_checkpoints": false,
   "model_info": "../model/training_info.npy",
-  "train_data_folder": "../data/train_crops",
-  "val_data_folder": "../data/val_crops"
+  "train_data_folder": "$SLURM_TMPDIR/train_crops",
+  "val_data_folder": "$SLURM_TMPDIR/val_crops"
 }
