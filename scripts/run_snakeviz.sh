@@ -1,1 +1,1 @@
- snakeviz -s log/profiling_results.prof 
+ snakeviz -s ../log/profiling_results.prof

@@ -84,7 +84,7 @@ class MainModel(tf.keras.Model):
         self.conv2d_6 = tf.keras.layers.Conv2D(
             filters=4 * self.config['nb_feature_maps'],
             kernel_size=(3, 3),
-            strides=(1, 1), padding='same'
+            strides=(2, 2), padding='same'
         )
 
         self.relu4 = tf.keras.layers.Activation(activation=tf.nn.relu)
@@ -100,47 +100,45 @@ class MainModel(tf.keras.Model):
         self.batch_norm_4 = tf.keras.layers.BatchNormalization()
         self.batch_norm_5 = tf.keras.layers.BatchNormalization()
         self.dropout1 = tf.keras.layers.Dropout(rate=self.config["dropout_rate"])
-        self.dropout2 = tf.keras.layers.Dropout(rate=self.config["dropout_rate"])
-        self.dropout3 = tf.keras.layers.Dropout(rate=self.config["dropout_rate"])
 
         self.flatten_5 = tf.keras.layers.Flatten()
-        self.lstm_6_1 = tf.keras.layers.LSTM(units=512, return_sequences=True, recurrent_activation=tf.nn.relu)
+        self.lstm_6_1 = tf.keras.layers.LSTM(units=384, return_sequences=True, recurrent_activation=tf.nn.relu)
         self.lstm_6_2 = tf.keras.layers.LSTM(units=256, recurrent_activation=tf.nn.relu)
         self.dense_7 = tf.keras.layers.Dense(self.config["nb_dense_units"], activation=tf.nn.relu)
         self.dense_8 = tf.keras.layers.Dense(4, activation=tf.nn.sigmoid)
 
     def cnn_forward(self, img):
-        print(img.shape)
+        # print(img.shape)
         x = self.conv3d_1(img)
-        print(x.shape)
+        # print(x.shape)
         x = self.batch_norm_1(x)
         x = self.relu1(x)
         x = self.pool_2(x)
-        print(x.shape)
+        # print(x.shape)
 
         x = self.conv2d_3(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.batch_norm_2(x)
         x = self.relu2(x)
         x = self.pool_4(x)
-        print(x.shape)
+        # print(x.shape)
 
         x = self.conv2d_5(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.batch_norm_3(x)
         x = self.relu3(x)
         x = self.pool_6(x)
-        print(x.shape)
+        # print(x.shape)
 
         x = self.conv2d_6(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.batch_norm_5(x)
         x = self.relu4(x)
         x = self.pool_7(x)
-        print(x.shape)
+        # print(x.shape)
 
         x = self.flatten_5(x)
-        print(x.shape)
+        # print(x.shape)
         return x
 
     def call(self, inputs):
@@ -171,18 +169,19 @@ class MainModel(tf.keras.Model):
         # x5 = self.cnn_forward(img5)
 
         x = tf.stack([x1, x2, x3], axis=1)
-        print(x.shape)
+        # print(x.shape)
         x = self.lstm_6_1(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.lstm_6_2(x)
-        print(x.shape)
+        # print(x.shape)
         x = tf.concat((x, station_id_onehot, date_sin_cos_vector, normalized_clearsky_GHIs), axis=1)
-        print(x.shape)
+        # print(x.shape)
 
         x = self.dense_7(x)
+        # print(x.shape)
+
         x = self.batch_norm_4(x)
         x = self.dropout1(x)
-        # print(x.shape)
         k = self.dense_8(x)
 
         assert not np.isnan(k).any()
