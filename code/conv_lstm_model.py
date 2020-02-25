@@ -45,64 +45,102 @@ class MainModel(tf.keras.Model):
             filters=self.config["nb_feature_maps"],
             kernel_size=(3, 3),
             input_shape=(image_size_m, image_size_n, nb_channels),
-            strides=(2, 2),
-            activation=tf.nn.relu, padding='same'
+            strides=(1, 1), padding='same'
         )
+
+        self.relu1 = tf.keras.layers.Activation(activation=tf.nn.relu)
+
         self.pool_2 = tf.keras.layers.MaxPool2D(
             pool_size=(2, 2),
             strides=(2, 2)
         )
+
         self.conv2d_3 = tf.keras.layers.Conv2D(
-            filters=2*self.config['nb_feature_maps'],
+            filters=2 * self.config['nb_feature_maps'],
             kernel_size=(3, 3),
-            strides=(2, 2),
-            activation=tf.nn.relu, padding='same'
+            strides=(1, 1), padding='same'
         )
+
+        self.relu2 = tf.keras.layers.Activation(activation=tf.nn.relu)
+
         self.pool_4 = tf.keras.layers.MaxPool2D(
             pool_size=(2, 2),
             strides=(2, 2)
         )
+
         self.conv2d_5 = tf.keras.layers.Conv2D(
-            filters=4 * self.config['nb_feature_maps'],
+            filters=3 * self.config['nb_feature_maps'],
             kernel_size=(3, 3),
-            strides=(2, 2),
-            activation=tf.nn.relu, padding='same'
+            strides=(1, 1), padding='same'
         )
+
+        self.relu3 = tf.keras.layers.Activation(activation=tf.nn.relu)
+
         self.pool_6 = tf.keras.layers.MaxPool2D(
             pool_size=(2, 2),
             strides=(2, 2)
         )
 
-        self.batch_norm = tf.keras.layers.BatchNormalization()
-        self.dropout = tf.keras.layers.Dropout(rate=self.config["dropout_rate"])
+        self.conv2d_6 = tf.keras.layers.Conv2D(
+            filters=4 * self.config['nb_feature_maps'],
+            kernel_size=(3, 3),
+            strides=(1, 1), padding='same'
+        )
+
+        self.relu4 = tf.keras.layers.Activation(activation=tf.nn.relu)
+
+        self.pool_7 = tf.keras.layers.MaxPool2D(
+            pool_size=(2, 2),
+            strides=(2, 2)
+        )
+
+        self.batch_norm_1 = tf.keras.layers.BatchNormalization()
+        self.batch_norm_2 = tf.keras.layers.BatchNormalization()
+        self.batch_norm_3 = tf.keras.layers.BatchNormalization()
+        self.batch_norm_4 = tf.keras.layers.BatchNormalization()
+        self.batch_norm_5 = tf.keras.layers.BatchNormalization()
+        self.dropout1 = tf.keras.layers.Dropout(rate=self.config["dropout_rate"])
+        self.dropout2 = tf.keras.layers.Dropout(rate=self.config["dropout_rate"])
+        self.dropout3 = tf.keras.layers.Dropout(rate=self.config["dropout_rate"])
 
         self.flatten_5 = tf.keras.layers.Flatten()
-        self.lstm_6_1 = tf.keras.layers.LSTM(units=512, return_sequences=True)
-        self.lstm_6_2 = tf.keras.layers.LSTM(units=512)
+        self.lstm_6_1 = tf.keras.layers.LSTM(units=512, return_sequences=True, recurrent_activation=tf.nn.relu)
+        self.lstm_6_2 = tf.keras.layers.LSTM(units=256, recurrent_activation=tf.nn.relu)
         self.dense_7 = tf.keras.layers.Dense(self.config["nb_dense_units"], activation=tf.nn.relu)
-        self.dense_8 = tf.keras.layers.Dense(4)
-        # self.dense_8 = tf.keras.layers.Dense(4, activation=tf.nn.sigmoid)
+        self.dense_8 = tf.keras.layers.Dense(4, activation=tf.nn.sigmoid)
 
     def cnn_forward(self, img):
+        print(img.shape)
         x = self.conv3d_1(img)
-        # print(x.shape)
+        print(x.shape)
+        x = self.batch_norm_1(x)
+        x = self.relu1(x)
         x = self.pool_2(x)
-        x = self.batch_norm(x)
-        x = self.dropout(x)
-        # print(x.shape)
+        print(x.shape)
+
         x = self.conv2d_3(x)
-        # print(x.shape)
+        print(x.shape)
+        x = self.batch_norm_2(x)
+        x = self.relu2(x)
         x = self.pool_4(x)
-        x = self.batch_norm(x)
-        x = self.dropout(x)
-        # print(x.shape)
+        print(x.shape)
+
         x = self.conv2d_5(x)
-        # print(x.shape)
+        print(x.shape)
+        x = self.batch_norm_3(x)
+        x = self.relu3(x)
         x = self.pool_6(x)
-        x = self.dropout(x)
-        # print(x.shape)
+        print(x.shape)
+
+        x = self.conv2d_6(x)
+        print(x.shape)
+        x = self.batch_norm_5(x)
+        x = self.relu4(x)
+        x = self.pool_7(x)
+        print(x.shape)
+
         x = self.flatten_5(x)
-        # print(x.shape)
+        print(x.shape)
         return x
 
     def call(self, inputs):
@@ -114,27 +152,36 @@ class MainModel(tf.keras.Model):
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
         # night_flags = inputs[3]
         station_id_onehot = (inputs[4])
+        date_sin_cos_vector = (inputs[5])
+
+        # Refer to report for mean/std choices
+        normalized_clearsky_GHIs = (clearsky_GHIs - 454.5) / 293.9
 
         # assert not np.isnan(images).any()
         img1 = images[:, 0, :, :, :]
         img2 = images[:, 1, :, :, :]
         img3 = images[:, 2, :, :, :]
+        # img4 = images[:, 3, :, :, :]
+        # img5 = images[:, 4, :, :, :]
 
         x1 = self.cnn_forward(img1)
         x2 = self.cnn_forward(img2)
         x3 = self.cnn_forward(img3)
+        # x4 = self.cnn_forward(img4)
+        # x5 = self.cnn_forward(img5)
 
         x = tf.stack([x1, x2, x3], axis=1)
-        # print(x.shape)
+        print(x.shape)
         x = self.lstm_6_1(x)
-        # print(x.shape)
+        print(x.shape)
         x = self.lstm_6_2(x)
-        # print(x.shape)
-        x = tf.concat((x, station_id_onehot), axis=1)
-        # print(x.shape)
+        print(x.shape)
+        x = tf.concat((x, station_id_onehot, date_sin_cos_vector, normalized_clearsky_GHIs), axis=1)
+        print(x.shape)
+
         x = self.dense_7(x)
-        # x = self.batch_norm(x) # produces error! why?
-        x = self.dropout(x)
+        x = self.batch_norm_4(x)
+        x = self.dropout1(x)
         # print(x.shape)
         k = self.dense_8(x)
 

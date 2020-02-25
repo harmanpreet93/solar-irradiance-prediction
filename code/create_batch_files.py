@@ -1,8 +1,5 @@
 import datetime
 import typing
-# from model_logging import get_logger
-
-# import tensorflow as tf
 import pandas as pd
 import numpy as np
 import h5py
@@ -10,9 +7,10 @@ import utils
 import os
 import tqdm
 import json
-# import cv2 as cv
-
 import multiprocessing
+# import cv2 as cv
+# import tensorflow as tf
+# from model_logging import get_logger
 
 
 def get_stations_coordinates(stations) -> typing.Dict[str, typing.Tuple]:
@@ -97,7 +95,7 @@ def save_image_and_batch(dir_path,
         #         datetime_sequence[i][j] = str(datetime_sequence[i][j]).encode("ascii", "ignore")
 
         # print("Date seq after: ", datetime_sequence)
-        f.create_dataset("datetime_sequence",shape=(len(datetime_sequence), 1), dtype='S100', data=datetime_sequence)
+        f.create_dataset("datetime_sequence", shape=(len(datetime_sequence), 1), dtype='S100', data=datetime_sequence)
 
 
 def get_channels(hdf5_path, hdf5_offset):
@@ -227,6 +225,7 @@ def get_night_time_flags(dataframe, target_time_offsets, timestamp, station_id):
 
 def get_station_specific_time(timestamp, station_id, time_zone_mapping):
     return timestamp - time_zone_mapping[station_id]
+
 
 def normalize_images(images):
     means = [0.30, 272.52, 236.94, 261.47, 247.28]
@@ -408,7 +407,8 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
                                                                                                 timestamps_from_history,
                                                                                                 target_time_offsets,
                                                                                                 stations_coordinates,
-                                                                                                window_size, time_zone_mapping)
+                                                                                                window_size,
+                                                                                                time_zone_mapping)
 
         if images is None or trueGHIs is None:
             # print("No image found for timestamp {}".format(time_index))
@@ -518,7 +518,6 @@ if __name__ == "__main__":
     stations = train_config["stations"]
     time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in train_config["target_time_offsets"]]
 
-
     train_dataframe = dataframe.loc['2010-01-01':'2015-01-01']
     val_dataframe = dataframe.loc['2015-01-01':'2015-12-31']
 
@@ -532,21 +531,21 @@ if __name__ == "__main__":
     my_train_args = []
     mini_batch_size = 256
     step_size = 500
+
     for i in range(0, 90000, step_size):
         args = (train_dataframe, dataframe, stations_coordinates, user_config, train_config, train_file_path, int(i),
                 int(i) + step_size, mini_batch_size)
         my_train_args.append(args)
 
-    val_file_path = "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_5"
+    val_file_path = "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_5_new"
     my_val_args = []
     for i in range(0, 20000, step_size):
-        args = (
-            val_dataframe, dataframe, stations_coordinates, user_config, train_config, val_file_path, int(i),
-            int(i) + step_size, mini_batch_size)
+        args = (val_dataframe, dataframe, stations_coordinates, user_config, train_config, val_file_path, int(i),
+                int(i) + step_size, mini_batch_size)
         my_val_args.append(args)
 
     p = multiprocessing.Pool(4)
     print("Saving batches now...")
-    p.starmap(save_batches, my_train_args)
+    # p.starmap(save_batches, my_train_args)
+    p.starmap(save_batches, my_val_args)
     print("Done")
-    # p.starmap(save_batches, my_val_args)

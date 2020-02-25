@@ -30,7 +30,8 @@ def ghi_to_k(max_k_ghi, true_ghi, clearsky_ghi):
 
 
 def mask_nighttime_predictions(*args, night_flag):
-    day_flag = tf.logical_not(night_flag)
+    # day_flag = tf.logical_not(night_flag)
+    day_flag = night_flag
     weight = tf.reduce_sum(tf.cast(day_flag, tf.float32))
     outputs = []
     for arg in args:
