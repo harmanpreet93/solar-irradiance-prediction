@@ -1,1 +1,1 @@
- tensorboard --logdir log/
+ tensorboard --logdir ../log/

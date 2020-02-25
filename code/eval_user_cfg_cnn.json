@@ -10,6 +10,7 @@
   "max_k_ghi":1.2,
   "dropout_rate":0.25,
   "dropout_rate_data":0.25,
+  "use_all_data_at_epoch":4,
 
   "image_size_m":82,
   "image_size_n":82,
