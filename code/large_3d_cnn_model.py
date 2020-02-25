@@ -129,6 +129,7 @@ class MainModel(tf.keras.Model):
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
         # night_flags = inputs[3]
         station_id_onehot = inputs[4]
+        date_vector = inputs[5]
 
         # Refer to report for mean/std choices
         normalized_clearsky_GHIs = (clearsky_GHIs - 454.5) / 293.9
@@ -167,7 +168,7 @@ class MainModel(tf.keras.Model):
         x = self.pool_3(x)
 
         x = self.flatten(x)
-        x = tf.concat((x, station_id_onehot, normalized_clearsky_GHIs), axis=1)
+        x = tf.concat((x, station_id_onehot, normalized_clearsky_GHIs, date_vector), axis=1)
 
         x = self.dense_1(x)
         x = self.bn_7(x, training=training)

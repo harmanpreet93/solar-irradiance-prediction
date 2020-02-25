@@ -29,13 +29,11 @@ def ghi_to_k(max_k_ghi, true_ghi, clearsky_ghi):
     return k
 
 
-def mask_nighttime_predictions(*args, night_flag):
-    # day_flag = tf.logical_not(night_flag)
-    day_flag = night_flag
-    weight = tf.reduce_sum(tf.cast(day_flag, tf.float32))
+def mask_nighttime_predictions(*args, daytime_flag):
+    weight = tf.reduce_sum(tf.cast(daytime_flag, tf.float32))
     outputs = []
     for arg in args:
-        outputs += [tf.boolean_mask(tensor=arg, mask=day_flag)]
+        outputs += [tf.boolean_mask(tensor=arg, mask=daytime_flag)]
     return outputs + [weight]
 
 
@@ -43,10 +41,10 @@ def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
     k_train = ghi_to_k(max_k_ghi, true_ghi=y_train, clearsky_ghi=x_train[1])
     with tf.GradientTape() as tape:
         k_pred, y_pred = model(x_train, training=True)
-        night_flag = tf.squeeze(x_train[3])
+        daytime_flag = tf.squeeze(x_train[3])
         k_train = tf.squeeze(k_train)
         k_pred, k_train, y_pred, y_train, weight = \
-            mask_nighttime_predictions(k_pred, k_train, y_pred, y_train, night_flag=night_flag)
+            mask_nighttime_predictions(k_pred, k_train, y_pred, y_train, daytime_flag=daytime_flag)
         loss = loss_fn(k_train, k_pred)
     gradient = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(gradient, model.trainable_variables))
@@ -56,10 +54,10 @@ def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
 def test_step(model, loss_fn, max_k_ghi, x_test, y_test):
     k_test = ghi_to_k(max_k_ghi, true_ghi=y_test, clearsky_ghi=x_test[1])
     k_pred, y_pred = model(x_test)
-    night_flag = tf.squeeze(x_test[3])
+    daytime_flag = tf.squeeze(x_test[3])
     k_test = tf.squeeze(k_test)
     y_pred, y_test, k_pred, k_test, weight = \
-        mask_nighttime_predictions(y_pred, y_test, k_pred, k_test, night_flag=night_flag)
+        mask_nighttime_predictions(y_pred, y_test, k_pred, k_test, daytime_flag=daytime_flag)
     loss = loss_fn(k_test, k_pred)
     return loss, y_test, y_pred, weight
 

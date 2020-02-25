@@ -59,16 +59,27 @@ class DataLoader():
             output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32, tf.float32, tf.float32)
         ).prefetch(tf.data.experimental.AUTOTUNE)
 
-    def to_seconds(self, date):
-        return (date.hour * 60 + date.minute) * 60 + date.second
+    def to_cyclical_secondofday(self, date):
+        SECONDS_PER_DAY = 24 * 60 * 60
+        second_of_day = (date.hour * 60 + date.minute) * 60 + date.second
+        day_cycle_rad = second_of_day / SECONDS_PER_DAY * 2.0 * np.pi
+        day_cycle_x = np.sin(day_cycle_rad)
+        day_cycle_y = np.cos(day_cycle_rad)
+        return pd.DataFrame(day_cycle_x), pd.DataFrame(day_cycle_y)
+
+    def to_cyclical_dayofyear(self, date):
+        DAYS_PER_YEAR = 365
+        year_cycle_rad = date.dayofyear / DAYS_PER_YEAR
+        year_cycle_x = np.sin(year_cycle_rad)
+        year_cycle_y = np.cos(year_cycle_rad)
+        return pd.DataFrame(year_cycle_x), pd.DataFrame(year_cycle_y)
 
     def create_sin_cos(self, date):
         date = date.astype('U50')
         date = pd.to_datetime(date.flatten())
-        date = self.to_seconds(date)
-        sin_time = np.sin(date)
-        cos_time = np.cos(date)
-        return np.array(pd.concat((pd.DataFrame(sin_time), pd.DataFrame(cos_time)), axis=1))
+        day_cycle_x, day_cycle_y = self.to_cyclical_secondofday(date)
+        year_cycle_x, year_cycle_y = self.to_cyclical_dayofyear(date)
+        return np.array(pd.concat((day_cycle_x, day_cycle_y, year_cycle_x, year_cycle_y), axis=1))
 
     def get_onehot_station_id(self, station_ids):
         return self.encoder.transform(station_ids)
@@ -85,7 +96,7 @@ class DataLoader():
                 night_flags = np.array(h5_data["night_flags"]).astype(np.bool)
                 station_id_onehot = self.get_onehot_station_id(station_ids)
                 date = np.array(h5_data['datetime_sequence'])
-                date_vector = self.create_sin_cos(date)  # size: batch * 2
+                date_vector = self.create_sin_cos(date)  # size: batch * 4
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, date_vector, true_GHIs
 
