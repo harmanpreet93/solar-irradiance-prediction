@@ -234,7 +234,7 @@ def main(
     if "end_bound" in admin_config:
         dataframe = dataframe[dataframe.index < datetime.datetime.fromisoformat(admin_config["end_bound"])]
 
-    create_and_save_batches(admin_config_path, user_config_path, training=False)
+    # create_and_save_batches(admin_config_path, user_config_path, training=False)
 
     target_datetimes = [datetime.datetime.fromisoformat(d) for d in admin_config["target_datetimes"]]
     assert target_datetimes and all([d in dataframe.index for d in target_datetimes])

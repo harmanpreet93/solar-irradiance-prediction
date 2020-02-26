@@ -325,12 +325,7 @@ def crop_images(df,
             # get true GHIs only for first timestamp - T0
             if index == 0:
                 clearSkyGHIs = get_ClearSkyGHIs(big_df, target_time_offsets, timestamp, station_id)
-
-                # we don't need true labels while evaluation
-                if training:
-                    trueGHIs = get_TrueGHIs(big_df, target_time_offsets, timestamp, station_id)
-                else:
-                    trueGHIs = np.zeros_like(clearSkyGHIs)
+                trueGHIs = get_TrueGHIs(big_df, target_time_offsets, timestamp, station_id)
                 night_time_flags = get_night_time_flags(big_df, target_time_offsets, timestamp, station_id)
 
                 if trueGHIs is None:
@@ -344,6 +339,9 @@ def crop_images(df,
 
                 if night_time_flags is None:
                     night_time_flags = np.ones(len(target_time_offsets))
+
+                if training:
+                    trueGHIs = [None]*len(clearSkyGHIs)
 
                 true_ghis_for_station.append(trueGHIs)
                 clearSky_ghis_for_station.append(clearSkyGHIs)
@@ -519,7 +517,7 @@ def handle_ghi_nans(df, handle_true_ghi=True, handle_clearsky_ghis=True):
 def create_and_save_batches(
         admin_config_path: typing.AnyStr,
         user_config_path: typing.Optional[typing.AnyStr] = None,
-        training: bool = False
+        training = False
 ) -> None:
     user_config = {}
     if user_config_path:
@@ -541,7 +539,7 @@ def create_and_save_batches(
 
     if not training:
         print("Handling GHIs...")
-        dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
+        # dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
 
         print("Preprocessing data...")
         # replace nan by np.nan (why??)
@@ -633,7 +631,7 @@ if __name__ == "__main__":
     create_and_save_batches(
         admin_config_path=args.admin_cfg_path,
         user_config_path=args.user_cfg_path,
-        is_eval=True
+        training=True
     )
 
     # user_config_path = "eval_user_cfg_lstm.json"
