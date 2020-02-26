@@ -9,7 +9,6 @@ from sklearn.preprocessing import OneHotEncoder
 from numpy.core._multiarray_umath import ndarray
 from model_logging import get_logger
 
-
 class DataLoader():
 
     def __init__(
@@ -97,6 +96,13 @@ class DataLoader():
                 station_id_onehot = self.get_onehot_station_id(station_ids)
                 date = np.array(h5_data['datetime_sequence'])
                 date_vector = self.create_sin_cos(date)  # size: batch * 4
+                # print(images.shape)
+                # print(true_GHIs.shape)
+                # print(clearsky_GHIs.shape)
+                # print(station_ids.shape)
+                # print(night_flags.shape)
+                # print(station_id_onehot.shape)
+                # print(date_vector.shape)
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, date_vector, true_GHIs
 

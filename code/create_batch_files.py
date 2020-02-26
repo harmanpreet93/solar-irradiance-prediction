@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import typing
 import pandas as pd
@@ -8,6 +9,8 @@ import os
 import tqdm
 import json
 import multiprocessing
+
+
 # import cv2 as cv
 # import tensorflow as tf
 # from model_logging import get_logger
@@ -29,7 +32,7 @@ def get_stations_coordinates(stations) -> typing.Dict[str, typing.Tuple]:
     return stations_coords
 
 
-def preprocess_dataframe(dataframe, train_config):
+def preprocess_dataframe(dataframe, stations):
     main_df = dataframe.copy()
 
     # make sure it sorted by its index
@@ -44,7 +47,6 @@ def preprocess_dataframe(dataframe, train_config):
     # dropping records without ncdf files
     main_df.drop(main_df.loc[main_df['ncdf_path'].isnull()].index, inplace=True)
 
-    stations = train_config["stations"]
     # drop all night times
     station_names = list(stations.keys())
     b = [s + "_DAYTIME" for s in station_names]
@@ -236,64 +238,58 @@ def normalize_images(images):
     return images
 
 
-def crop_images(df, big_df, timestamps_from_history, target_time_offsets, coordinates, window_size, time_zone_mapping):
+def crop_images(df,
+                big_df,
+                timestamps_from_history,
+                target_time_offsets,
+                coordinates,
+                window_size,
+                time_zone_mapping,
+                training):
     assert window_size < 42, f"window_size value of {window_size} is too big, please reduce it to 42 and lower"
 
-    n_channels = 5
     image_crops_for_stations = []
     true_ghis_for_station = []
     clearSky_ghis_for_station = []
     station_ids = []
     considered_timestamps = []
     night_time_flags_for_station = []
-    timestamps = []
-    T_0_night_times = []
-
-    # image_crops_for_stations = np.zeros(shape=(
-    #    len(coordinates), len(timestamps_from_history), window_size * 2, window_size * 2, n_channels
-    # ))
-
-    # ghis_for_station = np.zeros(shape=(len(coordinates), len(target_time_offsets)))
 
     for index, timestamp in enumerate(timestamps_from_history):
         try:
             row = df.loc[timestamp]
         except:
             if index == 0:
-                # print("Timestamp {} not found, Not considering this sequence! \n".format(timestamp))
+                print("Timestamp {} not found for station {}, Not considering this sequence! \n".format(timestamp,
+                                                                                                        coordinates))
                 return None, None, None, None
             else:
                 # use T0 image if missing
                 # print("Timestamp {} not found, using T0 image".format(timestamp))
-                row = df.loc[timestamps_from_history[0]]
+
+                # Harman: experimenting here: reading df from global dataframe here
+                # row = df.loc[timestamps_from_history[0]]
+                try:
+                    row = big_df.loc[timestamp]
+                except:
+                    row = df.loc[timestamps_from_history[0]]
 
         hdf5_path = row["hdf5_8bit_path"]
         hdf5_offset = row["hdf5_8bit_offset"]
-
-        #         if index == 0:
-        #             # read channel data for all stations at once,
-        #             # because same file consists data for all stations
-        #             channels_data = get_channels(hdf5_path, hdf5_offset)
-
-        #         # TODO: avoid reading file multiple times if T-delta times are from same file
-        #         else:
-        #             offset_zero_time = pd.to_datetime('08:00:00')
-        #             time_now = pd.to_datetime(str(timestamp).split()[-1])
-        #             if time_now < offset_zero_time:
-        #                 channels_data = get_channels(hdf5_path, hdf5_offset)
-
         channels_data = get_channels(hdf5_path, hdf5_offset)
 
         image_crops_per_stations = []
-        timestamps = []
-        # get cropped images for all stations
+
+        # get cropped images for stations
         for i, station_coordinates in enumerate(coordinates.items()):
 
             station_id = station_coordinates[0]
             DAYTIME_col = station_id + "_DAYTIME"
-            # check if T0 time isn't daytime, we don't want to train on such sequences for that particular station
-            if dataframe.loc[timestamps_from_history[0]][DAYTIME_col] == 0.0:
-                continue
+            if training:
+                # check if T0 time isn't daytime, we don't want to train on such sequences for that particular station
+                if df.loc[timestamps_from_history[0]][DAYTIME_col] == 0.0:
+                    print("Night time at station {}".format(station_id))
+                    continue
 
             x_coord = station_coordinates[1][0]
             y_coord = station_coordinates[1][1]
@@ -321,15 +317,20 @@ def crop_images(df, big_df, timestamps_from_history, target_time_offsets, coordi
             # print("Cropped img size: {}".format(cropped_img.shape))
 
             image_crops_per_stations.append(cropped_img)
-            timestamp_as_per_station_timezone = get_station_specific_time(timestamp, station_id, time_zone_mapping)
+            # timestamp_as_per_station_timezone = get_station_specific_time(timestamp, station_id, time_zone_mapping)
             # timestamps.append(np.expand_dims(timestamp_as_per_station_timezone, axis=0))
 
             # image_crops_for_stations.append(cropped_img)
 
             # get true GHIs only for first timestamp - T0
             if index == 0:
-                trueGHIs = get_TrueGHIs(big_df, target_time_offsets, timestamp, station_id)
                 clearSkyGHIs = get_ClearSkyGHIs(big_df, target_time_offsets, timestamp, station_id)
+
+                # we don't need true labels while evaluation
+                if training:
+                    trueGHIs = get_TrueGHIs(big_df, target_time_offsets, timestamp, station_id)
+                else:
+                    trueGHIs = np.zeros_like(clearSkyGHIs)
                 night_time_flags = get_night_time_flags(big_df, target_time_offsets, timestamp, station_id)
 
                 if trueGHIs is None:
@@ -376,13 +377,12 @@ def crop_images(df, big_df, timestamps_from_history, target_time_offsets, coordi
 
 
 def save_batches(main_df, dataframe, stations_coordinates, user_config, train_config, save_dir_path, start_index,
-                 end_index, mini_batch_size=256):
+                 end_index, mini_batch_size, training=False):
     input_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in user_config["input_time_offsets"]]
     target_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in train_config["target_time_offsets"]]
     time_zone_mapping = {k: pd.Timedelta(d).to_pytimedelta() for k, d in user_config["time_zone_mapping"].items()}
 
     window_size = user_config["image_size_m"] // 2
-    n_channels = user_config["nb_channels"]
 
     concat_images = np.array([])
     target_trueGHIs = np.array([])
@@ -408,12 +408,16 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
                                                                                                 target_time_offsets,
                                                                                                 stations_coordinates,
                                                                                                 window_size,
-                                                                                                time_zone_mapping)
+                                                                                                time_zone_mapping,
+                                                                                                training)
 
-        if images is None or trueGHIs is None:
+        if images is None:
             # print("No image found for timestamp {}".format(time_index))
             # print("No target GHIs found for timestamp {}".format(time_index))
             continue
+
+        # if trueGHIs is None:
+        #     continue
 
         if len(concat_images) == 0:
             concat_images = images
@@ -433,13 +437,14 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
         index += images.shape[0]
 
         # save h5py file here
-        if index >= mini_batch_size:
-            # print("Harman: ",concat_images.shape,
-            #       target_trueGHIs.shape,
-            #       target_clearSkyGHIs.shape,
-            #       target_station_ids.shape,
-            #       target_timestamps.shape,
-            #       target_night_time_flags.shape)
+        if index == mini_batch_size:
+            # if index >= mini_batch_size:
+            #     print("Harman: ",concat_images.shape,
+            #           target_trueGHIs.shape,
+            #           target_clearSkyGHIs.shape,
+            #           target_station_ids.shape,
+            #           target_timestamps.shape,
+            #           target_night_time_flags.shape)
 
             assert concat_images.shape[0] == target_trueGHIs.shape[0]
             assert concat_images.shape[0] == target_clearSkyGHIs.shape[0]
@@ -489,63 +494,187 @@ def interpolate_ghi_nans(df, column_name, stations):
     return df
 
 
-def handle_ghi_nans(df):
+def handle_ghi_nans(df, handle_true_ghi=True, handle_clearsky_ghis=True):
     stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
     df.replace('nan', np.NaN, inplace=True)
     df.sort_index(ascending=True, inplace=True)
-    print("Setting night GHI NaNs to 0")
-    df = fill_zero_for_night_ghi_nans(df, 'GHI', stations)
-    df = fill_zero_for_night_ghi_nans(df, 'CLEARSKY_GHI', stations)
-    print("Done\n")
-    print("Interpolating GHIs")
-    df = interpolate_ghi_nans(df, 'GHI', stations)
-    df = interpolate_ghi_nans(df, 'CLEARSKY_GHI', stations)
-    print("Done")
+
+    if handle_true_ghi:
+        print("Setting night GHI NaNs to 0")
+        df = fill_zero_for_night_ghi_nans(df, 'GHI', stations)
+        print("Interpolating GHIs")
+        df = interpolate_ghi_nans(df, 'GHI', stations)
+        print("Done")
+
+    if handle_clearsky_ghis:
+        print("Setting night clearsky GHI NaNs to 0")
+        df = fill_zero_for_night_ghi_nans(df, 'CLEARSKY_GHI', stations)
+        print("Interpolating clearsky GHIs")
+        df = interpolate_ghi_nans(df, 'CLEARSKY_GHI', stations)
+        print("Done")
+
     return df
 
 
-if __name__ == "__main__":
-    user_config_path = "eval_user_cfg_lstm.json"
-    train_config_path = "../train_cfg.json"
+def create_and_save_batches(
+        admin_config_path: typing.AnyStr,
+        user_config_path: typing.Optional[typing.AnyStr] = None,
+        training: bool = False
+) -> None:
+    user_config = {}
+    if user_config_path:
+        assert os.path.isfile(user_config_path), f"invalid user config file: {user_config_path}"
+        with open(user_config_path, "r") as fd:
+            user_config = json.load(fd)
 
-    user_config = load_file(user_config_path, "user")
-    train_config = load_file(train_config_path, "training")
+    assert os.path.isfile(admin_config_path), f"invalid admin config file: {admin_config_path}"
+    with open(admin_config_path, "r") as fd:
+        admin_config = json.load(fd)
 
-    dataframe_path = user_config["dataframe_path"]
+    dataframe_path = admin_config["dataframe_path"]
+    assert os.path.isfile(dataframe_path), f"invalid dataframe path: {dataframe_path}"
     dataframe = pd.read_pickle(dataframe_path)
-    dataframe = handle_ghi_nans(dataframe)
 
-    stations = train_config["stations"]
-    time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in train_config["target_time_offsets"]]
-
-    train_dataframe = dataframe.loc['2010-01-01':'2015-01-01']
-    val_dataframe = dataframe.loc['2015-01-01':'2015-12-31']
-
-    train_dataframe = preprocess_dataframe(train_dataframe, train_config)
-    val_dataframe = preprocess_dataframe(val_dataframe, train_config)
-
+    stations = admin_config["stations"]
     # get station coordinates, need to be called only once, or save its value in config file
     stations_coordinates = get_stations_coordinates(stations)
 
-    train_file_path = "/project/cq-training-1/project1/teams/team08/data/train_crops_seq_5"
-    my_train_args = []
-    mini_batch_size = 256
-    step_size = 500
+    if not training:
+        print("Handling GHIs...")
+        dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
 
-    for i in range(0, 90000, step_size):
-        args = (train_dataframe, dataframe, stations_coordinates, user_config, train_config, train_file_path, int(i),
+        print("Preprocessing data...")
+        # replace nan by np.nan (why??)
+        dataframe.replace('nan', np.NaN, inplace=True)
+        # dropping records without hdf5 files
+        dataframe.drop(dataframe.loc[dataframe['hdf5_8bit_path'].isnull()].index, inplace=True)
+
+        # dropping records without ncdf files
+        dataframe.drop(dataframe.loc[dataframe['ncdf_path'].isnull()].index, inplace=True)
+
+        print("Filtering dataframe based on start and end bound dates...")
+        filtered_dataframe = dataframe[dataframe.index >= datetime.datetime.fromisoformat(admin_config["start_bound"])]
+        filtered_dataframe = filtered_dataframe[
+            filtered_dataframe.index < datetime.datetime.fromisoformat(admin_config["end_bound"])]
+
+        target_datetimes = [datetime.datetime.fromisoformat(d) for d in admin_config["target_datetimes"]]
+        assert target_datetimes and all([d in filtered_dataframe.index for d in target_datetimes])
+
+        filtered_dataframe_ = filtered_dataframe.loc[target_datetimes]
+
+        # print("harman: ",filtered_dataframe_.shape)
+
+        for station, _ in stations.items():
+            print("Creating batches for station {}".format(station))
+
+            val_file_path = os.path.join(user_config['val_data_folder'], str(station))
+            mini_batch_size = 1
+            step_size = 10
+            my_val_args = []
+            for i in range(0, len(filtered_dataframe_), step_size):
+                args = (
+                filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config, admin_config,
+                val_file_path, int(i),
+                int(i) + step_size, mini_batch_size, training)
+                my_val_args.append(args)
+
+            p = multiprocessing.Pool(2)
+            # print("Saving batches for evaluation now...")
+            p.starmap(save_batches, my_val_args)
+            print("Done")
+
+    else:
+        dataframe = handle_ghi_nans(dataframe, handle_true_ghi=True, handle_clearsky_ghis=True)
+
+        train_dataframe = dataframe.loc['2010-01-01':'2015-01-01']
+        val_dataframe = dataframe.loc['2015-01-01':'2015-12-31']
+
+        train_dataframe = preprocess_dataframe(train_dataframe, stations)
+        val_dataframe = preprocess_dataframe(val_dataframe, stations)
+
+        train_file_path = user_config['train_data_folder']
+        my_train_args = []
+        mini_batch_size = user_config['mini_batch_size']
+        step_size = 500
+
+        for i in range(0, 90000, step_size):
+            args = (
+                train_dataframe, dataframe, stations_coordinates, user_config, admin_config, train_file_path, int(i),
                 int(i) + step_size, mini_batch_size)
-        my_train_args.append(args)
+            my_train_args.append(args)
 
-    val_file_path = "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_5_new"
-    my_val_args = []
-    for i in range(0, 20000, step_size):
-        args = (val_dataframe, dataframe, stations_coordinates, user_config, train_config, val_file_path, int(i),
-                int(i) + step_size, mini_batch_size)
-        my_val_args.append(args)
+        val_file_path = user_config['val_data_folder']
+        # val_file_path = "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_5_new"
+        my_val_args = []
+        for i in range(0, 20000, step_size):
+            args = (val_dataframe, dataframe, stations_coordinates, user_config, admin_config, val_file_path, int(i),
+                    int(i) + step_size, mini_batch_size)
+            my_val_args.append(args)
 
-    p = multiprocessing.Pool(4)
-    print("Saving batches now...")
-    # p.starmap(save_batches, my_train_args)
-    p.starmap(save_batches, my_val_args)
-    print("Done")
+        p = multiprocessing.Pool(4)
+        print("Saving batches now...")
+        # p.starmap(save_batches, my_train_args)
+        p.starmap(save_batches, my_val_args)
+        print("Done")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("admin_cfg_path", type=str,
+                        help="path to the JSON config file used to store test set/evaluation parameters",
+                        default="../val_cfg_local.json")
+    parser.add_argument("-u", "--user_cfg_path", type=str,
+                        help="path to the JSON config file used to store user model/dataloader parameters",
+                        default="eval_user_cfg_lstm.json")
+
+    args = parser.parse_args()
+
+    create_and_save_batches(
+        admin_config_path=args.admin_cfg_path,
+        user_config_path=args.user_cfg_path,
+        is_eval=True
+    )
+
+    # user_config_path = "eval_user_cfg_lstm.json"
+    # train_config_path = "../train_cfg.json"
+    #
+    # user_config = load_file(user_config_path, "user")
+    # train_config = load_file(train_config_path, "training")
+    #
+    # dataframe_path = user_config["dataframe_path"]
+    # dataframe = pd.read_pickle(dataframe_path)
+    # dataframe = handle_ghi_nans(dataframe)
+    #
+    # train_dataframe = dataframe.loc['2010-01-01':'2015-01-01']
+    # val_dataframe = dataframe.loc['2015-01-01':'2015-12-31']
+    #
+    # stations = train_config["stations"]
+    # train_dataframe = preprocess_dataframe(train_dataframe, stations)
+    # val_dataframe = preprocess_dataframe(val_dataframe, stations)
+    #
+    # # get station coordinates, need to be called only once, or save its value in config file
+    # stations_coordinates = get_stations_coordinates(stations)
+    #
+    # train_file_path = "/project/cq-training-1/project1/teams/team08/data/train_crops_seq_5"
+    # my_train_args = []
+    # mini_batch_size = 256
+    # step_size = 500
+    #
+    # for i in range(0, 90000, step_size):
+    #     args = (train_dataframe, dataframe, stations_coordinates, user_config, train_config, train_file_path, int(i),
+    #             int(i) + step_size, mini_batch_size)
+    #     my_train_args.append(args)
+    #
+    # val_file_path = "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_5_new"
+    # my_val_args = []
+    # for i in range(0, 20000, step_size):
+    #     args = (val_dataframe, dataframe, stations_coordinates, user_config, train_config, val_file_path, int(i),
+    #             int(i) + step_size, mini_batch_size)
+    #     my_val_args.append(args)
+    #
+    # p = multiprocessing.Pool(4)
+    # print("Saving batches now...")
+    # # p.starmap(save_batches, my_train_args)
+    # p.starmap(save_batches, my_val_args)
+    # print("Done")

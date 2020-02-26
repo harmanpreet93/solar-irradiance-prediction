@@ -11,7 +11,7 @@ import tqdm
 
 from data_loader import DataLoader
 from training_loop_launcher import select_model
-
+from create_batch_files import create_and_save_batches
 
 def prepare_dataloader(
         dataframe: pd.DataFrame,
@@ -58,7 +58,16 @@ def prepare_dataloader(
     # WE ARE PROVIDING YOU WITH A DUMMY DATA GENERATOR FOR DEMONSTRATION PURPOSES.
     # MODIFY EVERYTHING IN IN THIS BLOCK AS YOU SEE FIT
 
-    DL = DataLoader(dataframe, target_datetimes, stations, target_time_offsets, config, data_folder="data/val_crops")
+    base_folder_path = os.path.expandvars(config["val_data_folder"])
+    data_folder = os.path.join(base_folder_path, list(stations.keys())[0])
+
+    DL = DataLoader(dataframe,
+                    target_datetimes,
+                    stations,
+                    target_time_offsets,
+                    config,
+                    data_folder=data_folder)
+
     data_loader = DL.get_data_loader()
 
     # MODIFY ABOVE
@@ -92,8 +101,11 @@ def prepare_model(
 
     model = MainModel(stations, target_time_offsets, config, return_ghi_only=True)
 
+    # print("harman: ", MainModel.TRAINING_REQUIRED)
+
     if MainModel.TRAINING_REQUIRED:
         weights_file = config["model_file"]
+        print("Loading weights from {}".format(weights_file))
         assert os.path.exists(weights_file), "Model not trained!"
         model.load_weights(weights_file)
 
@@ -138,11 +150,16 @@ def generate_all_predictions(
         # usually, we would create a single data loader for all stations, but we just want to avoid trouble...
         stations = {station_name: target_stations[station_name]}
         print(f"preparing data loader & model for station '{station_name}' ({station_idx + 1}/{len(target_stations)})")
+
         data_loader = prepare_dataloader(dataframe, target_datetimes, stations, target_time_offsets, user_config)
+
         model = prepare_model(stations, target_time_offsets, user_config)
         station_preds = generate_predictions(data_loader, model, pred_count=len(target_datetimes))
+
+        # print("harman in prediction: ",len(station_preds), len(target_datetimes))
         assert len(station_preds) == len(target_datetimes), "number of predictions mismatch with requested datetimes"
         predictions.append(station_preds)
+        # print("station: {}: Predictions: {},".format(station_name, station_preds))
     return np.concatenate(predictions, axis=0)
 
 
@@ -217,6 +234,8 @@ def main(
     if "end_bound" in admin_config:
         dataframe = dataframe[dataframe.index < datetime.datetime.fromisoformat(admin_config["end_bound"])]
 
+    create_and_save_batches(admin_config_path, user_config_path, training=False)
+
     target_datetimes = [datetime.datetime.fromisoformat(d) for d in admin_config["target_datetimes"]]
     assert target_datetimes and all([d in dataframe.index for d in target_datetimes])
     target_stations = admin_config["stations"]
@@ -245,6 +264,14 @@ def main(
     assert not np.isnan(predictions).any(), "user predictions should NOT contain NaN values"
     predictions = predictions.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))
     gt = parse_gt_ghi_values(target_stations, target_datetimes, target_time_offsets, dataframe)
+
+    with open(preds_output_path + "_true_GHI", "w") as fd:
+        for i in range(len(gt)):
+            fd.write(str(gt[i]) + ",")
+            if (i+1) % 4 == 0:
+                fd.write("\n")
+            # fd.write(",".join([f"{v:0.03f}" for v in gt_.tolist()]) + "\n")
+
     gt = gt.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))
     day = parse_nighttime_flags(target_stations, target_datetimes, target_time_offsets, dataframe)
     day = day.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))
@@ -269,14 +296,20 @@ def main(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+
     parser.add_argument("preds_out_path", type=str,
-                        help="path where the raw model predictions should be saved (for visualization purposes)")
+                        help="path where the raw model predictions should be saved (for visualization purposes)",
+                        default="../log/output.txt")
     parser.add_argument("admin_cfg_path", type=str,
-                        help="path to the JSON config file used to store test set/evaluation parameters")
-    parser.add_argument("-u", "--user_cfg_path", type=str, default=None,
-                        help="path to the JSON config file used to store user model/dataloader parameters")
-    parser.add_argument("-s", "--stats_output_path", type=str, default=None,
-                        help="path where the prediction stats should be saved (for benchmarking)")
+                        help="path to the JSON config file used to store test set/evaluation parameters",
+                        default="../val_cfg_local.json")
+    parser.add_argument("-u", "--user_cfg_path", type=str,
+                        help="path to the JSON config file used to store user model/dataloader parameters",
+                        default="eval_user_cfg_lstm.json")
+    parser.add_argument("-s", "--stats_output_path", type=str,
+                        help="path where the prediction stats should be saved (for benchmarking)",
+                        default="../log/output.txt")
+
     args = parser.parse_args()
     main(
         preds_output_path=args.preds_out_path,
@@ -284,3 +317,10 @@ if __name__ == "__main__":
         user_config_path=args.user_cfg_path,
         stats_output_path=args.stats_output_path,
     )
+
+    # preds_output_path = "../log/output.txt"
+    # admin_config_path = "../val_cfg_local.json"
+    # user_config_path = "../code/eval_user_cfg_lstm.json"
+    # stats_output_path = "../log/output.txt"
+    #
+    # main(preds_output_path, admin_config_path, user_config_path, stats_output_path)
