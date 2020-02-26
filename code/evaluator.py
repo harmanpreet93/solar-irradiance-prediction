@@ -162,7 +162,7 @@ def generate_all_predictions(
         # print("harman in prediction: ",len(station_preds), len(target_datetimes))
         assert len(station_preds) == len(target_datetimes), "number of predictions mismatch with requested datetimes"
         predictions.append(station_preds)
-        print("station: {}: Predictions: {},".format(station_name, station_preds))
+        # print("station: {}: Predictions: {},".format(station_name, station_preds))
     return np.concatenate(predictions, axis=0)
 
 
@@ -267,6 +267,14 @@ def main(
     assert not np.isnan(predictions).any(), "user predictions should NOT contain NaN values"
     predictions = predictions.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))
     gt = parse_gt_ghi_values(target_stations, target_datetimes, target_time_offsets, dataframe)
+
+    with open(preds_output_path + "_true_GHI", "w") as fd:
+        for i in range(len(gt)):
+            fd.write(str(gt[i]) + ",")
+            if (i+1)%4==0:
+                fd.write("\n")
+            # fd.write(",".join([f"{v:0.03f}" for v in gt_.tolist()]) + "\n")
+
     gt = gt.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))
     day = parse_nighttime_flags(target_stations, target_datetimes, target_time_offsets, dataframe)
     day = day.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))

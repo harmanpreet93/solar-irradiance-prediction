@@ -534,7 +534,7 @@ def create_and_save_batches(
 
     if is_eval:
         print("Handling GHIs...")
-        # dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
+        dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
 
         print("Preprocessing data...")
         # replace nan by np.nan (why??)
