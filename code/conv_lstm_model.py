@@ -145,8 +145,11 @@ class MainModel(tf.keras.Model):
         '''
         Defines the forward pass through our model
         '''
-        images = tf.squeeze(inputs[0])
-        clearsky_GHIs = tf.squeeze(inputs[1])
+        # images = tf.squeeze(inputs[0])
+        images = inputs[0]
+
+        # clearsky_GHIs = tf.squeeze(inputs[1])
+        clearsky_GHIs = inputs[1]
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
         # night_flags = inputs[3]
         station_id_onehot = (inputs[4])
@@ -155,12 +158,18 @@ class MainModel(tf.keras.Model):
         # Refer to report for mean/std choices
         normalized_clearsky_GHIs = (clearsky_GHIs - 454.5) / 293.9
 
+        # print("harman: ", images.shape)
         # assert not np.isnan(images).any()
+
         img1 = images[:, 0, :, :, :]
         img2 = images[:, 1, :, :, :]
         img3 = images[:, 2, :, :, :]
         # img4 = images[:, 3, :, :, :]
         # img5 = images[:, 4, :, :, :]
+
+        # img1 = images[0, :, :, :]
+        # img2 = images[1, :, :, :]
+        # img3 = images[2, :, :, :]
 
         x1 = self.cnn_forward(img1)
         x2 = self.cnn_forward(img2)
@@ -173,7 +182,8 @@ class MainModel(tf.keras.Model):
         x = self.lstm_6_1(x)
         # print(x.shape)
         x = self.lstm_6_2(x)
-        # print(x.shape)
+
+        # print("Harman: ",x.shape, date_sin_cos_vector.shape, normalized_clearsky_GHIs.shape)
         x = tf.concat((x, station_id_onehot, date_sin_cos_vector, normalized_clearsky_GHIs), axis=1)
         # print(x.shape)
 

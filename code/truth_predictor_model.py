@@ -5,7 +5,7 @@ import tensorflow as tf
 
 
 class MainModel(tf.keras.Model):
-    TRAINING_REQUIRED = True
+    TRAINING_REQUIRED = False
 
     def __init__(
             self,

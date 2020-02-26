@@ -124,8 +124,11 @@ class MainModel(tf.keras.Model):
         '''
         Defines the forward pass through our model
         '''
-        images = tf.squeeze(inputs[0])
-        clearsky_GHIs = tf.squeeze(inputs[1])
+        # images = tf.squeeze(inputs[0])
+        images = inputs[0]
+
+        # clearsky_GHIs = tf.squeeze(inputs[1])
+        clearsky_GHIs = inputs[1]
         # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
         # night_flags = inputs[3]
         station_id_onehot = inputs[4]
@@ -140,7 +143,7 @@ class MainModel(tf.keras.Model):
         x = self.bn_1(x, training=training)
         x = tf.nn.relu(x)
 
-        x = tf.squeeze(x)
+        x = tf.squeeze(x, [1])
         x = self.pool_1(x)
 
         x = self.conv2d_1(x)
