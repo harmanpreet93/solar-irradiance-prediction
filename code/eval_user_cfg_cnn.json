@@ -27,10 +27,10 @@
   "start_bound_val": "2015-01-01",
   "end_bound_val": "2016-01-01",
   "delta_time": "-30 min",
-  "ignore_checkpoints": false,
+  "ignore_checkpoints": true,
   "model_info": "../model/training_info.npy",
-  "train_data_folder": "$SLURM_TMPDIR/train_crops",
-  "val_data_folder": "../data/test_crops_seq_3_eval",
+  "train_data_folder": "../../data/train_crops_seq_3",
+  "val_data_folder": "../../data/val_crops_seq_3",
   "input_time_offsets": [
     "P0DT0H0M0S",
     "P0DT0H30M0S",
