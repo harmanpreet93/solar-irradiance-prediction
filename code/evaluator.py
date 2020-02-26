@@ -162,6 +162,7 @@ def generate_all_predictions(
         # print("harman in prediction: ",len(station_preds), len(target_datetimes))
         assert len(station_preds) == len(target_datetimes), "number of predictions mismatch with requested datetimes"
         predictions.append(station_preds)
+        print("station: {}: Predictions: {},".format(station_name, station_preds))
     return np.concatenate(predictions, axis=0)
 
 

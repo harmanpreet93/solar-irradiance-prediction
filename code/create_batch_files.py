@@ -558,6 +558,7 @@ def create_and_save_batches(
 
         for station, _ in stations.items():
             print("Creating batches for station {}".format(station))
+
             val_file_path = os.path.join(user_config['val_data_folder'], str(station))
             mini_batch_size = 1
             step_size = 10

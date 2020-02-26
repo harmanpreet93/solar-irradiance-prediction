@@ -7,7 +7,7 @@
   "batch_size":1,
   "learning_rate":0.001,
   "nb_epoch":40,
-  "max_k_ghi":1.2,
+  "max_k_ghi":1.05,
   "dropout_rate":0.25,
   "dropout_rate_data":0.25,
   "use_all_data_at_epoch":4,
@@ -21,7 +21,7 @@
 
   "code_profiling_enabled":false,
 
-  "dataframe_path": "../data/catalog.helios.public.20100101-20160101.pkl",
+  "dataframe_path": "/project/cq-training-1/project1/teams/team08/data/catalog.helios.public.20100101-20160101.pkl",
   "start_bound_train": "2010-01-01",
   "end_bound_train": "2015-01-01",
   "start_bound_val": "2015-01-01",
@@ -30,5 +30,22 @@
   "ignore_checkpoints": false,
   "model_info": "../model/training_info.npy",
   "train_data_folder": "$SLURM_TMPDIR/train_crops",
-  "val_data_folder": "../data/test_crops_seq_3_eval"
+  "val_data_folder": "../data/test_crops_seq_3_eval",
+  "input_time_offsets": [
+    "P0DT0H0M0S",
+    "P0DT0H30M0S",
+    "P0DT1H0M0S",
+    "P0DT1H30M0S",
+    "P0DT2H0M0S",
+    "P0DT2H30M0S"
+  ],
+  "time_zone_mapping": {
+    "DRA": "P0DT8H0M0S",
+    "TBL": "P0DT7H0M0S",
+    "FPK": "P0DT7H0M0S",
+    "BND": "P0DT6H0M0S",
+    "GWN": "P0DT6H0M0S",
+    "SXF": "P0DT6H0M0S",
+    "PSU": "P0DT5H0M0S"
+  }
 }
