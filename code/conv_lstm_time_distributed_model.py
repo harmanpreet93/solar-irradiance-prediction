@@ -94,7 +94,6 @@ class MainModel(tf.keras.Model):
             strides=(2, 2)
         )
 
-
         self.batch_norm_1 = tf.keras.layers.BatchNormalization()
         self.batch_norm_2 = tf.keras.layers.BatchNormalization()
         self.batch_norm_3 = tf.keras.layers.BatchNormalization()

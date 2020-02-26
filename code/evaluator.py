@@ -97,8 +97,6 @@ def prepare_model(
 
     # MODIFY BELOW
 
-
-
     MainModel = select_model(config)
 
     model = MainModel(stations, target_time_offsets, config, return_ghi_only=True)
@@ -136,7 +134,6 @@ def generate_predictions(data_loader: tf.data.Dataset, model: tf.keras.Model, pr
             predictions.append(pred)
             pbar.update(len(pred))
     return np.concatenate(predictions, axis=0)
-
 
 
 def generate_all_predictions(
@@ -271,7 +268,7 @@ def main(
     with open(preds_output_path + "_true_GHI", "w") as fd:
         for i in range(len(gt)):
             fd.write(str(gt[i]) + ",")
-            if (i+1)%4==0:
+            if (i+1) % 4 == 0:
                 fd.write("\n")
             # fd.write(",".join([f"{v:0.03f}" for v in gt_.tolist()]) + "\n")
 
