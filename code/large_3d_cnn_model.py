@@ -142,7 +142,8 @@ class MainModel(tf.keras.Model):
         else:
             # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
             # night_flags = inputs[3]
-            station_id_onehot = inputs[4]
+            # station_id_onehot = inputs[4]
+            station_id_onehot = tf.zeros(inputs[4].shape)
             date_vector = inputs[5]
             # Refer to report for mean/std choices
             normalized_clearsky_GHIs = (clearsky_GHIs - 454.5) / 293.9
