@@ -36,10 +36,10 @@ def mask_nighttime_predictions(*args, daytime_flag):
     return outputs + [weight]
 
 
-def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
+def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train, use_image_data_only):
     k_train = ghi_to_k(max_k_ghi, true_ghi=y_train, clearsky_ghi=x_train[1])
     with tf.GradientTape() as tape:
-        k_pred, y_pred = model(x_train, training=True)
+        k_pred, y_pred = model(x_train, training=True, use_image_data_only=use_image_data_only)
         daytime_flag = tf.squeeze(x_train[3])
         k_train = tf.squeeze(k_train)
         k_pred, k_train, y_pred, y_train, weight = \
@@ -50,9 +50,9 @@ def train_step(model, optimizer, loss_fn, max_k_ghi, x_train, y_train):
     return loss, y_train, y_pred, weight
 
 
-def test_step(model, loss_fn, max_k_ghi, x_test, y_test):
+def test_step(model, loss_fn, max_k_ghi, x_test, y_test, use_image_data_only):
     k_test = ghi_to_k(max_k_ghi, true_ghi=y_test, clearsky_ghi=x_test[1])
-    k_pred, y_pred = model(x_test)
+    k_pred, y_pred = model(x_test, use_image_data_only=use_image_data_only)
     daytime_flag = tf.squeeze(x_test[3])
     k_test = tf.squeeze(k_test)
     y_pred, y_test, k_pred, k_test, weight = \
@@ -170,7 +170,8 @@ def train(
             'batch_size': user_config["batch_size"],
             'input_seq_length': user_config["input_seq_length"],
             'nb_feature_maps': user_config["nb_feature_maps"],
-            'nb_dense_units': user_config["nb_dense_units"]
+            'nb_dense_units': user_config["nb_dense_units"],
+            'use_all_data_at_epoch': user_config["use_all_data_at_epoch"]
         })
 
     n_train_steps = len(glob.glob(user_config["train_data_folder"] + "/*hdf5"))
@@ -194,7 +195,8 @@ def train(
                         loss_fn,
                         max_k_ghi,
                         x_train=minibatch[:-1],
-                        y_train=minibatch[-1]
+                        y_train=minibatch[-1],
+                        use_image_data_only=(epoch < user_config["use_all_data_at_epoch"])
                     )
                     train_loss(loss, sample_weight=weight)
                     train_rmse(y_train, y_pred, sample_weight=weight)
@@ -221,7 +223,8 @@ def train(
                         loss_fn,
                         max_k_ghi,
                         x_test=minibatch[:-1],
-                        y_test=minibatch[-1]
+                        y_test=minibatch[-1],
+                        use_image_data_only=(epoch < user_config["use_all_data_at_epoch"])
                     )
                     test_loss(loss, sample_weight=weight)
                     test_rmse(y_test, y_pred, sample_weight=weight)

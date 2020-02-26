@@ -120,7 +120,7 @@ class MainModel(tf.keras.Model):
             activation=None
         )
 
-    def call(self, inputs, training=False):
+    def call(self, inputs, training=False, use_image_data_only=False):
         '''
         Defines the forward pass through our model
         '''
@@ -134,8 +134,18 @@ class MainModel(tf.keras.Model):
         station_id_onehot = inputs[4]
         date_vector = inputs[5]
 
-        # Refer to report for mean/std choices
-        normalized_clearsky_GHIs = (clearsky_GHIs - 454.5) / 293.9
+        if use_image_data_only:
+            station_id_onehot = tf.zeros(inputs[4].shape)
+            date_vector = tf.zeros(inputs[5].shape)
+            # Refer to report for mean/std choices
+            normalized_clearsky_GHIs = tf.zeros(inputs[1].shape)
+        else:
+            # true_GHIs = inputs[2]  # NOTE: True GHI is set to zero for formal evaluation
+            # night_flags = inputs[3]
+            station_id_onehot = inputs[4]
+            date_vector = inputs[5]
+            # Refer to report for mean/std choices
+            normalized_clearsky_GHIs = (clearsky_GHIs - 454.5) / 293.9
 
         # assert not np.isnan(images).any()
 
