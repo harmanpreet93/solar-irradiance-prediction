@@ -40,7 +40,7 @@ def clip_dataframe(dataframe, train_config):
 
 def get_targets(dataframe, config):
     datetimes = [datetime.datetime.fromisoformat(d) for d in config["target_datetimes"]]
-    assert datetimes and all([d in dataframe.index for d in datetimes])
+    # assert datetimes and all([d in dataframe.index for d in datetimes])
 
     stations = config["stations"]
     time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in config["target_time_offsets"]]
