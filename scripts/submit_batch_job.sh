@@ -3,19 +3,19 @@
 #SBATCH --gres=gpu:k80:1
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=10000M
-##SBATCH --reservation=IFT6759_2020-02-21
+#SBATCH --reservation=IFT6759_2020-02-26
 
-date
-echo ~~~~~~~~~~~~removing tmp files...
-rm -rf $SLURM_TMPDIR/*
-date
-echo ~~~~~~~~~~~~copying train files...
-mkdir $SLURM_TMPDIR/train_crops/
-cp ../../data/train_crops_seq_3/batch_[567890]* $SLURM_TMPDIR/train_crops/
-date
-echo ~~~~~~~~~~~~copying val files...
-mkdir $SLURM_TMPDIR/val_crops/
-cp ../../data/val_crops_seq_3/batch_[234567890]* $SLURM_TMPDIR/val_crops/
+# date
+# echo ~~~~~~~~~~~~removing tmp files...
+# rm -rf $SLURM_TMPDIR/*
+# date
+# echo ~~~~~~~~~~~~copying train files...
+# mkdir $SLURM_TMPDIR/train_crops/
+# cp ../../data/train_crops_seq_3/batch_[567890]* $SLURM_TMPDIR/train_crops/
+# date
+# echo ~~~~~~~~~~~~copying val files...
+# mkdir $SLURM_TMPDIR/val_crops/
+# cp ../../data/val_crops_seq_3/batch_[234567890]* $SLURM_TMPDIR/val_crops/
 date
 echo ~~~~~~~~~~~~setting up environement
 module load python/3.7

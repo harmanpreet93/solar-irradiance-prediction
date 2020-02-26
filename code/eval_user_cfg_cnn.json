@@ -7,10 +7,10 @@
   "batch_size":1,
   "learning_rate":0.001,
   "nb_epoch":40,
-  "max_k_ghi":1.2,
+  "max_k_ghi":1.10,
   "dropout_rate":0.25,
   "dropout_rate_data":0.25,
-  "use_all_data_at_epoch":4,
+  "use_all_data_at_epoch":1,
 
   "image_size_m":82,
   "image_size_n":82,
@@ -28,8 +28,8 @@
   "end_bound_val": "2016-01-01",
   "delta_time": "-30 min",
 
-  "ignore_checkpoints": false,
+  "ignore_checkpoints":true,
   "model_info": "../model/training_info.npy",
-  "train_data_folder": "$SLURM_TMPDIR/train_crops",
-  "val_data_folder": "$SLURM_TMPDIR/val_crops"
+  "train_data_folder": "/project/cq-training-1/project1/teams/team08/data/train_crops_seq_3",
+  "val_data_folder": "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_3"
 }
