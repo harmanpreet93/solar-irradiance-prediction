@@ -101,8 +101,6 @@ def prepare_model(
 
     model = MainModel(stations, target_time_offsets, config, return_ghi_only=True)
 
-    # print("harman: ", MainModel.TRAINING_REQUIRED)
-
     if MainModel.TRAINING_REQUIRED:
         weights_file = config["model_file"]
         print("Loading weights from {}".format(weights_file))

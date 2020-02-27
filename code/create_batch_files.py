@@ -343,6 +343,7 @@ def crop_images(df,
                 if training:
                     trueGHIs = [None]*len(clearSkyGHIs)
 
+
                 true_ghis_for_station.append(trueGHIs)
                 clearSky_ghis_for_station.append(clearSkyGHIs)
                 # append station id if everything works well till this point
