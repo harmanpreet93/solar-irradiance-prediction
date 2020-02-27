@@ -135,6 +135,10 @@ def train(
 
     train_data_loader = Train_DL.get_data_loader()
     val_data_loader = Val_DL.get_data_loader()
+
+    # Set random seed before initializing the model weights
+    tf.random.set_seed(user_config["random_seed"])
+
     model = MainModel(tr_stations, tr_time_offsets, user_config)
 
     # set hyper-parameters

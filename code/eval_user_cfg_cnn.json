@@ -1,5 +1,6 @@
 {
-  "model_file": "/project/cq-training-1/project1/teams/team08/model/my_model.index",
+  "random_seed":42,
+  "model_file": "model/my_model.index",
   "target_model":"large_3d_cnn_model",
   "nb_feature_maps":64,
   "nb_dense_units":1024,
@@ -29,8 +30,8 @@
   "delta_time": "-30 min",
   "ignore_checkpoints":true,
   "model_info": "../model/training_info.npy",
-  "train_data_folder": "/project/cq-training-1/project1/teams/team08/data/train_crops_seq_3",
-  "val_data_folder": "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_3",
+  "train_data_folder": "../../data/train_crops_seq_3",
+  "val_data_folder": "../../data/val_crops_seq_3",
   "input_time_offsets": [
     "P0DT0H0M0S",
     "P0DT0H30M0S",
