@@ -115,34 +115,34 @@ def get_TrueGHIs(dataframe, target_time_offsets, timestamp, station_id, is_eval=
     # using clearsky value to interpolate
     try:
         trueGHIs[0] = dataframe.loc[timestamp][GHI_col]  # T0_GHI
-    except:
+    except Exception as e:
         try:
             trueGHIs[0] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             trueGHIs[0] = 0
 
     try:
         trueGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][GHI_col]  # T1_GHI
-    except:
+    except Exception as e:
         try:
             trueGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             pass
 
     try:
         trueGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][GHI_col]  # T3_GHI
-    except:
+    except Exception as e:
         try:
             trueGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             pass
 
     try:
         trueGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][GHI_col]  # T6_GHI
-    except:
+    except Exception as e:
         try:
             trueGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             pass
 
     # if we still encounter NaN, handle it
@@ -165,34 +165,34 @@ def get_ClearSkyGHIs(dataframe, target_time_offsets, timestamp, station_id, is_e
     # if timestamp missing
     try:
         clearSkyGHIs[0] = dataframe.loc[timestamp][clearSkyGHI_col]  # T0_GHI
-    except:
+    except Exception as e:
         try:
             clearSkyGHIs[0] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             clearSkyGHIs[0] = 0
 
     try:
         clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]  # T1_GHI
-    except:
+    except Exception as e:
         try:
             clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             clearSkyGHIs[1] = 1
 
     try:
         clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]  # T3_GHI
-    except:
+    except Exception as e:
         try:
             clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             clearSkyGHIs[2] = 1
 
     try:
         clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][clearSkyGHI_col]  # T6_GHI
-    except:
+    except Exception as e:
         try:
             clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]
-        except:
+        except Exception as e:
             clearSkyGHIs[3] = 1
 
     # if we still encounter NaN, handle it
@@ -215,22 +215,21 @@ def get_night_time_flags(dataframe, target_time_offsets, timestamp, station_id, 
     # if timestamp missing
     try:
         night_time_flags[0] = dataframe.loc[timestamp][DAYTIME_col]  # T0_GHI
-    except:
+    except Exception as e:
         night_time_flags[0] = 1.0
-
     try:
         night_time_flags[1] = dataframe.loc[timestamp + target_time_offsets[1]][DAYTIME_col]  # T1_GHI
-    except:
+    except Exception as e:
         night_time_flags[1] = 1.0
 
     try:
         night_time_flags[2] = dataframe.loc[timestamp + target_time_offsets[2]][DAYTIME_col]  # T3_GHI
-    except:
+    except Exception as e:
         night_time_flags[2] = 1.0
 
     try:
         night_time_flags[3] = dataframe.loc[timestamp + target_time_offsets[3]][DAYTIME_col]  # T6_GHI
-    except:
+    except Exception as e:
         night_time_flags[3] = 1.0
 
     # if we still encounter NaN, handle it
@@ -274,7 +273,7 @@ def crop_images(df,
         # print("Reading timestamp: {}".format(timestamp))
         try:
             row = df.loc[timestamp]
-        except:
+        except Exception as e:
             if index == 0:
                 print("Timestamp {} not found for station {}, Not considering this sequence! \n".format(timestamp,
                                                                                                         coordinates))
@@ -283,13 +282,6 @@ def crop_images(df,
                 # use T0 image if missing
                 # print("Timestamp {} not found in dataset, using T0 dataframe row information".format(timestamp))
                 row = df.loc[timestamps_from_history[0]]
-
-                # Harman: experimenting here: reading df from global dataframe here
-                # row = df.loc[timestamps_from_history[0]]
-                # try:
-                #     row = big_df.loc[timestamp]
-                # except:
-                #     row = df.loc[timestamps_from_history[0]]
 
         hdf5_path = row["hdf5_8bit_path"]
         hdf5_offset = row["hdf5_8bit_offset"]
