@@ -40,7 +40,6 @@ def get_label_html_color_code(idx):
 
 def fig2array(fig):
     """Transforms a pyplot figure into a numpy-compatible BGR array.
-
     The reason why we flip the channel order (RGB->BGR) is for OpenCV compatibility. Feel free to
     edit this function if you wish to use it with another display library.
     """
@@ -151,13 +150,11 @@ def fetch_hdf5_sample(
         sample_idx: int,
 ) -> typing.Any:
     """Decodes and returns a single sample from an HDF5 dataset.
-
     Args:
         dataset_name: name of the HDF5 dataset to fetch the sample from using the reader. In the context of
             the GHI prediction project, this may be for example an imagery channel name (e.g. "ch1").
         reader: an HDF5 archive reader obtained via ``h5py.File(...)`` which can be used for dataset indexing.
         sample_idx: the integer index (or offset) that corresponds to the position of the sample in the dataset.
-
     Returns:
         The sample. This function will automatically decompress the sample if it was compressed. It the sample is
         unavailable because the input was originally masked, the function will return ``None``. The sample itself
@@ -198,7 +195,6 @@ def viz_hdf5_imagery(
         copy_last_if_missing: bool = True,
 ) -> None:
     """Displays a looping visualization of the imagery channels saved in an HDF5 file.
-
     This visualization requires OpenCV3+ ('cv2'), and will loop while refreshing a local window until the program
     is killed, or 'q' is pressed. The visualization can also be paused by pressing the space bar.
     """
@@ -290,7 +286,6 @@ def preplot_live_ghi_curves(
         plot_title: typing.Optional[typing.AnyStr] = None,
 ) -> np.ndarray:
     """Pre-plots a set of GHI curves with update bars and returns the raw pixel arrays.
-
     This function is used in ``viz_hdf5_imagery`` to prepare GHI plots when stations & dataframe information
     is available.
     """
@@ -355,7 +350,6 @@ def plot_ghi_curves(
         current_time: typing.Optional[datetime.datetime] = None,
 ) -> plt.Axes:
     """Plots a set of GHI curves and returns the associated matplotlib axes object.
-
     This function is used in ``draw_daily_ghi`` and ``preplot_live_ghi_curves`` to create simple
     graphs of GHI curves (clearsky, measured, predicted).
     """
@@ -399,7 +393,6 @@ def draw_daily_ghi(
         sample_step: datetime.timedelta,
 ):
     """Draws a set of 2D GHI curve plots and returns the associated matplotlib fig/axes objects.
-
     This function is used in ``viz_predictions`` to prepare the full-horizon, multi-station graphs of
     GHI values over numerous days.
     """
@@ -444,7 +437,6 @@ def viz_predictions(
         test_config_path: typing.AnyStr,
 ):
     """Displays a looping visualization of the GHI predictions saved by the evaluation script.
-
     This visualization requires OpenCV3+ ('cv2'), and will loop while refreshing a local window until the program
     is killed, or 'q' is pressed. The arrow keys allow the user to change which day is being shown.
     """
@@ -488,7 +480,7 @@ def viz_predictions(
     for day_idx, day_start in enumerate(tqdm.tqdm(days_range, desc="preparing daytime GHI intervals")):
         window_start, window_end = day_start - time_overlap, day_start + time_window + time_overlap
         sample_start, sample_end = (window_start - start_bound) // time_sample, (
-                window_end - start_bound) // time_sample
+            window_end - start_bound) // time_sample
         for sample_iter_idx, sample_idx in enumerate(range(sample_start, sample_end + 1)):
             if sample_idx < 0 or sample_idx >= len(dataframe.index):
                 continue
