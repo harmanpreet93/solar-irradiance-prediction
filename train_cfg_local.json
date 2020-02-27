@@ -1,5 +1,5 @@
 {
-  "dataframe_path": "../data/catalog.helios.public.20100101-20160101.pkl",
+  "dataframe_path": "/project/cq-training-1/project1/teams/team08/data/catalog.helios.public.20100101-20160101.pkl",
   "start_bound": "2015-01-01",
   "end_bound": "2015-01-10",
   "stations": {
