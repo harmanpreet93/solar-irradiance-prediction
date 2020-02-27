@@ -40,7 +40,6 @@ def clip_dataframe(dataframe, train_config):
 
 def get_targets(dataframe, config):
     datetimes = [datetime.datetime.fromisoformat(d) for d in config["target_datetimes"]]
-    # assert datetimes and all([d in dataframe.index for d in datetimes])
 
     stations = config["stations"]
     time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in config["target_time_offsets"]]
@@ -49,16 +48,10 @@ def get_targets(dataframe, config):
 
 
 def select_model(user_config):
-    if user_config["target_model"] == "truth_predictor_model":
-        from truth_predictor_model import MainModel
-    elif user_config["target_model"] == "clearsky_model":
+    if user_config["target_model"] == "clearsky_model":
         from clearsky_model import MainModel
-    elif user_config["target_model"] == "3d_cnn_model":
-        from cnn_3d_model import MainModel
     elif user_config["target_model"] == "large_3d_cnn_model":
         from large_3d_cnn_model import MainModel
-    elif user_config["target_model"] == "time_distributed_lstm_model":
-        from conv_lstm_time_distributed_model import MainModel
     elif user_config["target_model"] == "conv_lstm_model":
         from conv_lstm_model import MainModel
     else:

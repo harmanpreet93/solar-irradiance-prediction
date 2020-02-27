@@ -263,12 +263,12 @@ def train(
 
             logger.debug(
                 "Epoch {0}/{1}, Train Loss = {2}, Val Loss = {3}"
-                    .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
+                .format(epoch + 1, nb_epoch, train_loss.result(), test_loss.result())
             )
 
             logger.debug(
                 "Epoch {0}/{1}, Train RMSE = {2}, Val RMSE = {3}"
-                    .format(epoch + 1, nb_epoch, train_rmse.result(), test_rmse.result())
+                .format(epoch + 1, nb_epoch, train_rmse.result(), test_rmse.result())
             )
 
             # Reset metrics every epoch
