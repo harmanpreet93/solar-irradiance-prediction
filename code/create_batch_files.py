@@ -543,10 +543,9 @@ def create_and_save_batches(
     stations_coordinates = get_stations_coordinates(stations)
 
     if is_eval:
-        print("Evaluation: ")
+        print("Evaluating model:  {}".format(user_config["target_model"]))
         # print("Handling GHIs...")
         # dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
-
         print("\nPreprocessing data...")
         # replace nan by np.nan (why??)
         dataframe.replace('nan', np.NaN, inplace=True)
@@ -565,16 +564,31 @@ def create_and_save_batches(
 
         filtered_dataframe_ = filtered_dataframe.loc[target_datetimes]
 
+        args_array = []
         for station, _ in stations.items():
-            print("Creating batches for station: {}".format(station))
-
             val_file_path = os.path.join(user_config['val_data_folder'], str(station))
             mini_batch_size = 1
-            save_batches(filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config,
-                         admin_config, val_file_path, 0,
-                         len(filtered_dataframe_) + 1, mini_batch_size, is_eval)
+            args = (
+                filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config,
+                admin_config, val_file_path, 0,
+                len(filtered_dataframe_) + 1, mini_batch_size, is_eval)
+            args_array.append(args)
 
-            print("Done")
+        p = multiprocessing.Pool(4)
+        print("Saving batches now...")
+        p.starmap(save_batches, args_array)
+        print("Done")
+
+        # for station, _ in stations.items():
+        #     print("Creating batches for station: {}".format(station))
+        #
+        #     val_file_path = os.path.join(user_config['val_data_folder'], str(station))
+        #     mini_batch_size = 1
+        #     save_batches(filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config,
+        #                  admin_config, val_file_path, 0,
+        #                  len(filtered_dataframe_) + 1, mini_batch_size, is_eval)
+        #
+        #     print("Done \n")
 
     else:
         dataframe = handle_ghi_nans(dataframe, handle_true_ghi=True, handle_clearsky_ghis=True)
