@@ -485,7 +485,7 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
             assert concat_images.shape[0] == target_night_time_flags.shape[0]
 
             batch_counter += 1
-            file_name = "batch_" + str(batch_counter)
+            file_name = "batch_" + str(batch_counter).zfill(4)
 
             save_image_and_batch(save_dir_path, file_name,
                                  concat_images[:mini_batch_size],
