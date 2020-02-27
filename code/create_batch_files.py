@@ -340,9 +340,8 @@ def crop_images(df,
                 if night_time_flags is None:
                     night_time_flags = np.ones(len(target_time_offsets))
 
-                if training:
+                if not training:
                     trueGHIs = [None]*len(clearSkyGHIs)
-
 
                 true_ghis_for_station.append(trueGHIs)
                 clearSky_ghis_for_station.append(clearSkyGHIs)
