@@ -1,5 +1,6 @@
 {
-  "model_file": "/project/cq-training-1/project1/teams/team08/model/my_model.index",
+  "random_seed":42,
+  "model_file": "model/my_model.index",
   "target_model":"large_3d_cnn_model",
   "nb_feature_maps":64,
   "nb_dense_units":1024,
