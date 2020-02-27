@@ -99,12 +99,10 @@ class DataLoader():
                 date = np.array(h5_data['datetime_sequence'])
                 date_vector = self.create_sin_cos(date)  # size: batch * 4
                 # print(images.shape)
-                # print(true_GHIs.shape)
-                # print(clearsky_GHIs.shape)
-                # print(station_ids.shape)
-                # print(night_flags.shape)
-                # print(station_id_onehot.shape)
-                # print(date_vector.shape)
+                # print("*********************************")
+                # print(true_GHIs)
+                # print(clearsky_GHIs)
+                # print("*********************************")
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, date_vector, true_GHIs
 

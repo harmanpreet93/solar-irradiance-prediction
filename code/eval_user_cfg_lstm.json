@@ -1,5 +1,5 @@
 {
-  "model_file": "../model/my_model.index",
+  "model_file": "../model_conv_lstm_1/my_model.index",
   "target_model": "conv_lstm_model",
   "nb_feature_maps": 28,
   "nb_dense_units": 128,
@@ -13,7 +13,7 @@
   "image_size_n": 82,
   "image_offset_m": 0,
   "image_offset_n": 0,
-  "mini_batch_size": 1,
+  "mini_batch_size": 256,
   "input_seq_length": 3,
   "nb_channels": 5,
   "code_profiling_enabled": true,
