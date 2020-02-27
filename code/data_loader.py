@@ -8,6 +8,7 @@ import tensorflow as tf
 from sklearn.preprocessing import OneHotEncoder
 from numpy.core._multiarray_umath import ndarray
 from model_logging import get_logger
+import glob
 
 class DataLoader():
 
@@ -46,7 +47,8 @@ class DataLoader():
         self.logger.debug("Initialize start")
         self.test_station = self.stations[0]
         self.output_seq_len = len(self.target_time_offsets)
-        self.data_files_list = os.listdir(self.data_folder)
+        self.data_files_list = glob.glob(self.data_folder + "/*.hdf5")
+        self.data_files_list.sort()
 
         stations = np.array([b"BND", b"TBL", b"DRA", b"FPK", b"GWN", b"PSU", b"SXF"])
         self.encoder = OneHotEncoder(sparse=False)
@@ -84,8 +86,8 @@ class DataLoader():
         return self.encoder.transform(station_ids)
 
     def data_generator_fn(self):
-        for file in self.data_files_list:
-            f_path = os.path.join(self.data_folder, file)
+        for f_path in self.data_files_list:
+            # f_path = os.path.join(self.data_folder, file)
 
             with h5py.File(f_path, 'r') as h5_data:
                 images = np.array(h5_data["images"])

@@ -155,7 +155,7 @@ def generate_all_predictions(
         model = prepare_model(stations, target_time_offsets, user_config)
         station_preds = generate_predictions(data_loader, model, pred_count=len(target_datetimes))
 
-        # print("harman in prediction: ",len(station_preds), len(target_datetimes))
+        # print("harman in prediction: ",(station_preds), (target_datetimes))
         assert len(station_preds) == len(target_datetimes), "number of predictions mismatch with requested datetimes"
         predictions.append(station_preds)
         # print("station: {}: Predictions: {},".format(station_name, station_preds))
@@ -233,7 +233,7 @@ def main(
     if "end_bound" in admin_config:
         dataframe = dataframe[dataframe.index < datetime.datetime.fromisoformat(admin_config["end_bound"])]
 
-    # create_and_save_batches(admin_config_path, user_config_path, training=False)
+    create_and_save_batches(admin_config_path, user_config_path, is_eval=True)
 
     target_datetimes = [datetime.datetime.fromisoformat(d) for d in admin_config["target_datetimes"]]
     assert target_datetimes and all([d in dataframe.index for d in target_datetimes])
@@ -270,6 +270,7 @@ def main(
             if (i+1) % 4 == 0:
                 fd.write("\n")
             # fd.write(",".join([f"{v:0.03f}" for v in gt_.tolist()]) + "\n")
+
 
     gt = gt.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))
     day = parse_nighttime_flags(target_stations, target_datetimes, target_time_offsets, dataframe)

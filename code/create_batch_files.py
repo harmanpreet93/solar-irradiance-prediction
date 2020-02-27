@@ -10,12 +10,6 @@ import tqdm
 import json
 import multiprocessing
 
-
-# import cv2 as cv
-# import tensorflow as tf
-# from model_logging import get_logger
-
-
 def get_stations_coordinates(stations) -> typing.Dict[str, typing.Tuple]:
     # takes one hdf5 path
     hdf5_path = "/project/cq-training-1/project1/data/hdf5v7_8bit/2015.01.01.0800.h5"
@@ -110,20 +104,21 @@ def get_channels(hdf5_path, hdf5_offset):
     return ch1_data, ch2_data, ch3_data, ch4_data, ch6_data
 
 
-def get_TrueGHIs(dataframe, target_time_offsets, timestamp, station_id):
-    # check if its night at this station
-    DAYTIME_col = station_id + "_DAYTIME"
-    # return None if T0 time isn't daytime, we don't want to train on such sequences
-    if dataframe.loc[timestamp][DAYTIME_col] == 0.0:
-        return None
+def get_TrueGHIs(dataframe, target_time_offsets, timestamp, station_id, is_eval=False):
+
+    if not is_eval:
+        # check if its night at this station
+        DAYTIME_col = station_id + "_DAYTIME"
+        # return None if T0 time isn't daytime, we don't want to train on such sequences
+        if dataframe.loc[timestamp][DAYTIME_col] == 0.0:
+            return None
 
     trueGHIs = [0] * 4
     GHI_col = station_id + "_GHI"
     clearSkyGHI_col = station_id + "_CLEARSKY_GHI"
 
     # if timestamp missing
-    # TODO: interpolate GHI values if NaN
-    # use clearsky value to interpolate for now!
+    # using clearsky value to interpolate
     try:
         trueGHIs[0] = dataframe.loc[timestamp][GHI_col]  # T0_GHI
     except:
@@ -163,24 +158,56 @@ def get_TrueGHIs(dataframe, target_time_offsets, timestamp, station_id):
     return trueGHIs
 
 
-def get_ClearSkyGHIs(dataframe, target_time_offsets, timestamp, station_id):
-    # check if its night at this station
-    DAYTIME_col = station_id + "_DAYTIME"
-    # return None if T0 time isn't daytime, we don't want to train on such sequences
-    if dataframe.loc[timestamp][DAYTIME_col] == 0.0:
-        return None
+def get_ClearSkyGHIs(dataframe, target_time_offsets, timestamp, station_id, is_eval=False):
+    if not is_eval:
+        # check if its night at this station
+        DAYTIME_col = station_id + "_DAYTIME"
+        # return None if T0 time isn't daytime, we don't want to train on such sequences
+        if dataframe.loc[timestamp][DAYTIME_col] == 0.0:
+            return None
 
     clearSkyGHIs = [0] * 4
     clearSkyGHI_col = station_id + "_CLEARSKY_GHI"
     # if timestamp missing
-    # TODO: interpolate GHI values if NaN
     try:
         clearSkyGHIs[0] = dataframe.loc[timestamp][clearSkyGHI_col]  # T0_GHI
+    except:
+        try:
+            clearSkyGHIs[0] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
+        except:
+            clearSkyGHIs[0] = 0
+
+    try:
         clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]  # T1_GHI
+    except:
+        try:
+            clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
+        except:
+            clearSkyGHIs[1] = 1
+
+    try:
         clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]  # T3_GHI
+    except:
+        try:
+            clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]
+        except:
+            clearSkyGHIs[2] = 1
+
+    try:
         clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][clearSkyGHI_col]  # T6_GHI
     except:
-        return None
+        try:
+            clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]
+        except:
+            clearSkyGHIs[3] = 1
+
+    # try:
+    #     clearSkyGHIs[0] = dataframe.loc[timestamp][clearSkyGHI_col]  # T0_GHI
+    #     clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]  # T1_GHI
+    #     clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]  # T3_GHI
+    #     clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][clearSkyGHI_col]  # T6_GHI
+    # except:
+    #     return None
 
     # if we still encounter NaN, handle it
     if np.any(np.isnan(clearSkyGHIs)):
@@ -189,12 +216,14 @@ def get_ClearSkyGHIs(dataframe, target_time_offsets, timestamp, station_id):
     return clearSkyGHIs
 
 
-def get_night_time_flags(dataframe, target_time_offsets, timestamp, station_id):
+def get_night_time_flags(dataframe, target_time_offsets, timestamp, station_id, is_eval=False):
     # check if its night at this station
     DAYTIME_col = station_id + "_DAYTIME"
-    # return None if T0 time isn't daytime, we don't want to train on such sequences
-    if dataframe.loc[timestamp][DAYTIME_col] == 0.0:
-        return None
+
+    if not is_eval:
+        # return None if T0 time isn't daytime, we don't want to train on such sequences
+        if dataframe.loc[timestamp][DAYTIME_col] == 0.0:
+            return None
 
     night_time_flags = [1.0] * 4
     # if timestamp missing
@@ -245,7 +274,8 @@ def crop_images(df,
                 coordinates,
                 window_size,
                 time_zone_mapping,
-                training):
+                is_eval):
+
     assert window_size < 42, f"window_size value of {window_size} is too big, please reduce it to 42 and lower"
 
     image_crops_for_stations = []
@@ -256,16 +286,17 @@ def crop_images(df,
     night_time_flags_for_station = []
 
     for index, timestamp in enumerate(timestamps_from_history):
+        # print("Reading timestamp: {}".format(timestamp))
         try:
             row = df.loc[timestamp]
         except:
             if index == 0:
-                print("Timestamp {} not found for station {}, Not considering this sequence! \n".format(timestamp,
-                                                                                                        coordinates))
+                print("Timestamp {} not found for station {}, Not considering this sequence! \n".format(timestamp, coordinates))
                 return None, None, None, None
             else:
                 # use T0 image if missing
-                # print("Timestamp {} not found, using T0 image".format(timestamp))
+                # print("Timestamp {} not found in dataset, using T0 dataframe row information".format(timestamp))
+                # row = df.loc[timestamps_from_history[0]]
 
                 # Harman: experimenting here: reading df from global dataframe here
                 # row = df.loc[timestamps_from_history[0]]
@@ -276,6 +307,7 @@ def crop_images(df,
 
         hdf5_path = row["hdf5_8bit_path"]
         hdf5_offset = row["hdf5_8bit_offset"]
+
         channels_data = get_channels(hdf5_path, hdf5_offset)
 
         image_crops_per_stations = []
@@ -285,8 +317,8 @@ def crop_images(df,
 
             station_id = station_coordinates[0]
             DAYTIME_col = station_id + "_DAYTIME"
-            if training:
-                # check if T0 time isn't daytime, we don't want to train on such sequences for that particular station
+            if not is_eval:
+            # check if T0 time isn't daytime, we don't want to train on such sequences for that particular station
                 if df.loc[timestamps_from_history[0]][DAYTIME_col] == 0.0:
                     print("Night time at station {}".format(station_id))
                     continue
@@ -324,24 +356,25 @@ def crop_images(df,
 
             # get true GHIs only for first timestamp - T0
             if index == 0:
-                clearSkyGHIs = get_ClearSkyGHIs(big_df, target_time_offsets, timestamp, station_id)
-                trueGHIs = get_TrueGHIs(big_df, target_time_offsets, timestamp, station_id)
-                night_time_flags = get_night_time_flags(big_df, target_time_offsets, timestamp, station_id)
+                trueGHIs = get_TrueGHIs(big_df, target_time_offsets, timestamp, station_id, is_eval)
+                clearSkyGHIs = get_ClearSkyGHIs(big_df, target_time_offsets, timestamp, station_id, is_eval)
+                night_time_flags = get_night_time_flags(big_df, target_time_offsets, timestamp, station_id, is_eval)
+
+                if is_eval:
+                    trueGHIs = [0]*4
 
                 if trueGHIs is None:
-                    # print("No target GHIs found for timestamp {}".format(timestamp))
+                    print("No target GHIs found for timestamp {}".format(timestamp))
                     # setup dummy GHIs for now!
                     trueGHIs = np.ones(len(target_time_offsets))
                     # return None, None
 
                 if clearSkyGHIs is None:
+                    print("No clearsky GHIs found for timestamp {}".format(timestamp))
                     clearSkyGHIs = np.ones(len(target_time_offsets))
 
                 if night_time_flags is None:
                     night_time_flags = np.ones(len(target_time_offsets))
-
-                if not training:
-                    trueGHIs = [None]*len(clearSkyGHIs)
 
                 true_ghis_for_station.append(trueGHIs)
                 clearSky_ghis_for_station.append(clearSkyGHIs)
@@ -375,7 +408,8 @@ def crop_images(df,
 
 
 def save_batches(main_df, dataframe, stations_coordinates, user_config, train_config, save_dir_path, start_index,
-                 end_index, mini_batch_size, training=False):
+                 end_index, mini_batch_size, is_eval=True):
+
     input_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in user_config["input_time_offsets"]]
     target_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in train_config["target_time_offsets"]]
     time_zone_mapping = {k: pd.Timedelta(d).to_pytimedelta() for k, d in user_config["time_zone_mapping"].items()}
@@ -407,15 +441,15 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
                                                                                                 stations_coordinates,
                                                                                                 window_size,
                                                                                                 time_zone_mapping,
-                                                                                                training)
+                                                                                                is_eval)
 
         if images is None:
             # print("No image found for timestamp {}".format(time_index))
             # print("No target GHIs found for timestamp {}".format(time_index))
             continue
 
-        # if trueGHIs is None:
-        #     continue
+        if trueGHIs is None:
+            continue
 
         if len(concat_images) == 0:
             concat_images = images
@@ -452,6 +486,7 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
 
             batch_counter += 1
             file_name = "batch_" + str(batch_counter)
+
             save_image_and_batch(save_dir_path, file_name,
                                  concat_images[:mini_batch_size],
                                  target_trueGHIs[:mini_batch_size],
@@ -492,9 +527,11 @@ def interpolate_ghi_nans(df, column_name, stations):
     return df
 
 
-def handle_ghi_nans(df, handle_true_ghi=True, handle_clearsky_ghis=True):
+def handle_ghi_nans(old_df, handle_true_ghi=True, handle_clearsky_ghis=True):
     stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
+    df = old_df.copy()
     df.replace('nan', np.NaN, inplace=True)
+
     df.sort_index(ascending=True, inplace=True)
 
     if handle_true_ghi:
@@ -513,11 +550,10 @@ def handle_ghi_nans(df, handle_true_ghi=True, handle_clearsky_ghis=True):
 
     return df
 
-
 def create_and_save_batches(
         admin_config_path: typing.AnyStr,
         user_config_path: typing.Optional[typing.AnyStr] = None,
-        training = False
+        is_eval = True
 ) -> None:
     user_config = {}
     if user_config_path:
@@ -537,8 +573,8 @@ def create_and_save_batches(
     # get station coordinates, need to be called only once, or save its value in config file
     stations_coordinates = get_stations_coordinates(stations)
 
-    if not training:
-        print("Handling GHIs...")
+    if is_eval:
+        # print("Handling GHIs...")
         # dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
 
         print("Preprocessing data...")
@@ -552,8 +588,7 @@ def create_and_save_batches(
 
         print("Filtering dataframe based on start and end bound dates...")
         filtered_dataframe = dataframe[dataframe.index >= datetime.datetime.fromisoformat(admin_config["start_bound"])]
-        filtered_dataframe = filtered_dataframe[
-            filtered_dataframe.index < datetime.datetime.fromisoformat(admin_config["end_bound"])]
+        filtered_dataframe = filtered_dataframe[filtered_dataframe.index < datetime.datetime.fromisoformat(admin_config["end_bound"])]
 
         target_datetimes = [datetime.datetime.fromisoformat(d) for d in admin_config["target_datetimes"]]
         assert target_datetimes and all([d in filtered_dataframe.index for d in target_datetimes])
@@ -563,22 +598,23 @@ def create_and_save_batches(
         # print("harman: ",filtered_dataframe_.shape)
 
         for station, _ in stations.items():
-            print("Creating batches for station {}".format(station))
+            print("Creating batches for station: {}".format(station))
 
             val_file_path = os.path.join(user_config['val_data_folder'], str(station))
             mini_batch_size = 1
-            step_size = 10
-            my_val_args = []
-            for i in range(0, len(filtered_dataframe_), step_size):
-                args = (
-                filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config, admin_config,
-                val_file_path, int(i),
-                int(i) + step_size, mini_batch_size, training)
-                my_val_args.append(args)
+            save_batches(filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config, admin_config, val_file_path, 0,
+                        len(filtered_dataframe_)+1, mini_batch_size, is_eval)
 
-            p = multiprocessing.Pool(2)
-            # print("Saving batches for evaluation now...")
-            p.starmap(save_batches, my_val_args)
+
+            # my_val_args = []
+            # for i in range(0, len(filtered_dataframe_), step_size):
+            #     args = (filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config, admin_config, val_file_path, int(i),
+            #             int(i) + step_size, mini_batch_size, is_eval)
+            #     my_val_args.append(args)
+            #
+            # p = multiprocessing.Pool(1)
+            # # print("Saving batches for evaluation now...")
+            # p.starmap(save_batches, my_val_args)
             print("Done")
 
     else:
@@ -597,8 +633,8 @@ def create_and_save_batches(
 
         for i in range(0, 90000, step_size):
             args = (
-                train_dataframe, dataframe, stations_coordinates, user_config, admin_config, train_file_path, int(i),
-                int(i) + step_size, mini_batch_size)
+            train_dataframe, dataframe, stations_coordinates, user_config, admin_config, train_file_path, int(i),
+            int(i) + step_size, mini_batch_size)
             my_train_args.append(args)
 
         val_file_path = user_config['val_data_folder']
@@ -631,7 +667,7 @@ if __name__ == "__main__":
     create_and_save_batches(
         admin_config_path=args.admin_cfg_path,
         user_config_path=args.user_cfg_path,
-        training=True
+        is_eval=True
     )
 
     # user_config_path = "eval_user_cfg_lstm.json"
