@@ -12,15 +12,17 @@ import matplotlib.dates
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import tensorflow as tf
+# import tensorflow as tf
 import tqdm
 
 
 def get_label_color_mapping(idx):
     """Returns the PASCAL VOC color triplet for a given label index."""
+
     # https://gist.github.com/wllhf/a4533e0adebe57e3ed06d4b50c8419ae
     def bitget(byteval, ch):
         return (byteval & (1 << ch)) != 0
+
     r = g = b = 0
     for j in range(8):
         r = r | (bitget(idx, 0) << 7 - j)
@@ -48,52 +50,53 @@ def fig2array(fig):
     return buf[..., ::-1]
 
 
-def compress_array(
-        array: np.ndarray,
-        compr_type: typing.Optional[str] = "auto",
-) -> bytes:
-    """Compresses the provided numpy array according to a predetermined strategy.
-    If ``compr_type`` is 'auto', the best strategy will be automatically selected based on the input
-    array type. If ``compr_type`` is an empty string (or ``None``), no compression will be applied.
-    """
-    assert compr_type is None or compr_type in ["lz4", "float16+lz4", "uint8+jpg",
-                                                "uint8+jp2", "uint16+jp2", "auto", ""], \
-        f"unrecognized compression strategy '{compr_type}'"
-    if compr_type is None or not compr_type:
-        return array.tobytes()
-    if compr_type == "lz4":
-        return lz4.frame.compress(array.tobytes())
-    if compr_type == "float16+lz4":
-        assert np.issubdtype(array.dtype, np.floating), "no reason to cast to float16 is not float32/64"
-        return lz4.frame.compress(array.astype(np.float16).tobytes())
-    if compr_type == "uint8+jpg":
-        assert array.ndim == 2 or (array.ndim == 3 and (array.shape[2] == 1 or array.shape[2] == 3)), \
-            "jpg compression via tensorflow requires 2D or 3D image with 1/3 channels in last dim"
-        if array.ndim == 2:
-            array = np.expand_dims(array, axis=2)
-        assert array.dtype == np.uint8, "jpg compression requires uint8 array"
-        return tf.io.encode_jpeg(array).numpy()
-    if compr_type == "uint8+jp2" or compr_type == "uint16+jp2":
-        assert array.ndim == 2 or (array.ndim == 3 and (array.shape[2] == 1 or array.shape[2] == 3)), \
-            "jp2 compression via opencv requires 2D or 3D image with 1/3 channels in last dim"
-        if array.ndim == 2:
-            array = np.expand_dims(array, axis=2)
-        assert array.dtype == np.uint8 or array.dtype == np.uint16, "jp2 compression requires uint8/16 array"
-        if os.getenv("OPENCV_IO_ENABLE_JASPER") is None:
-            # for local/trusted use only; see issue here: https://github.com/opencv/opencv/issues/14058
-            os.environ["OPENCV_IO_ENABLE_JASPER"] = "1"
-        retval, buffer = cv.imencode(".jp2", array)
-        assert retval, "JPEG2000 encoding failed"
-        return buffer.tobytes()
-    # could also add uint16 png/tiff via opencv...
-    if compr_type == "auto":
-        # we cheat for auto-decompression by prefixing the strategy in the bytecode
-        if array.ndim == 2 or (array.ndim == 3 and (array.shape[2] == 1 or array.shape[2] == 3)):
-            if array.dtype == np.uint8:
-                return b"uint8+jpg" + compress_array(array, compr_type="uint8+jpg")
-            if array.dtype == np.uint16:
-                return b"uint16+jp2" + compress_array(array, compr_type="uint16+jp2")
-        return b"lz4" + compress_array(array, compr_type="lz4")
+# def compress_array(
+#         array: np.ndarray,
+#         compr_type: typing.Optional[str] = "auto",
+# ) -> bytes:
+#     """Compresses the provided numpy array according to a predetermined strategy.
+
+#     If ``compr_type`` is 'auto', the best strategy will be automatically selected based on the input
+#     array type. If ``compr_type`` is an empty string (or ``None``), no compression will be applied.
+#     """
+#     assert compr_type is None or compr_type in ["lz4", "float16+lz4", "uint8+jpg",
+#                                                 "uint8+jp2", "uint16+jp2", "auto", ""], \
+#         f"unrecognized compression strategy '{compr_type}'"
+#     if compr_type is None or not compr_type:
+#         return array.tobytes()
+#     if compr_type == "lz4":
+#         return lz4.frame.compress(array.tobytes())
+#     if compr_type == "float16+lz4":
+#         assert np.issubdtype(array.dtype, np.floating), "no reason to cast to float16 is not float32/64"
+#         return lz4.frame.compress(array.astype(np.float16).tobytes())
+#     if compr_type == "uint8+jpg":
+#         assert array.ndim == 2 or (array.ndim == 3 and (array.shape[2] == 1 or array.shape[2] == 3)), \
+#             "jpg compression via tensorflow requires 2D or 3D image with 1/3 channels in last dim"
+#         if array.ndim == 2:
+#             array = np.expand_dims(array, axis=2)
+#         assert array.dtype == np.uint8, "jpg compression requires uint8 array"
+#         return tf.io.encode_jpeg(array).numpy()
+#     if compr_type == "uint8+jp2" or compr_type == "uint16+jp2":
+#         assert array.ndim == 2 or (array.ndim == 3 and (array.shape[2] == 1 or array.shape[2] == 3)), \
+#             "jp2 compression via opencv requires 2D or 3D image with 1/3 channels in last dim"
+#         if array.ndim == 2:
+#             array = np.expand_dims(array, axis=2)
+#         assert array.dtype == np.uint8 or array.dtype == np.uint16, "jp2 compression requires uint8/16 array"
+#         if os.getenv("OPENCV_IO_ENABLE_JASPER") is None:
+#             # for local/trusted use only; see issue here: https://github.com/opencv/opencv/issues/14058
+#             os.environ["OPENCV_IO_ENABLE_JASPER"] = "1"
+#         retval, buffer = cv.imencode(".jp2", array)
+#         assert retval, "JPEG2000 encoding failed"
+#         return buffer.tobytes()
+#     # could also add uint16 png/tiff via opencv...
+#     if compr_type == "auto":
+#         # we cheat for auto-decompression by prefixing the strategy in the bytecode
+#         if array.ndim == 2 or (array.ndim == 3 and (array.shape[2] == 1 or array.shape[2] == 3)):
+#             if array.dtype == np.uint8:
+#                 return b"uint8+jpg" + compress_array(array, compr_type="uint8+jpg")
+#             if array.dtype == np.uint16:
+#                 return b"uint16+jp2" + compress_array(array, compr_type="uint16+jp2")
+#         return b"lz4" + compress_array(array, compr_type="lz4")
 
 
 def decompress_array(
@@ -103,8 +106,10 @@ def decompress_array(
         shape: typing.Optional[typing.Union[typing.List, typing.Tuple]] = None,
 ) -> np.ndarray:
     """Decompresses the provided numpy array according to a predetermined strategy.
+
     If ``compr_type`` is 'auto', the correct strategy will be automatically selected based on the array's
     bytecode prefix. If ``compr_type`` is an empty string (or ``None``), no decompression will be applied.
+
     This function can optionally convert and reshape the decompressed array, if needed.
     """
     compr_types = ["lz4", "float16+lz4", "uint8+jpg", "uint8+jp2", "uint16+jp2"]
@@ -469,11 +474,13 @@ def viz_predictions(
     day_count = int(math.ceil((end_bound - start_bound) / time_window))
     clearsky_ghi_data = np.full((day_count, len(stations), sample_count), fill_value=float("nan"), dtype=np.float32)
     station_ghi_data = np.full((day_count, len(stations), sample_count), fill_value=float("nan"), dtype=np.float32)
-    pred_ghi_data = np.full((day_count, len(stations), pred_horiz, sample_count), fill_value=float("nan"), dtype=np.float32)
+    pred_ghi_data = np.full((day_count, len(stations), pred_horiz, sample_count), fill_value=float("nan"),
+                            dtype=np.float32)
     days_range = pd.date_range(start_bound, end_bound, freq=time_window, closed="left")
     for day_idx, day_start in enumerate(tqdm.tqdm(days_range, desc="preparing daytime GHI intervals")):
         window_start, window_end = day_start - time_overlap, day_start + time_window + time_overlap
-        sample_start, sample_end = (window_start - start_bound) // time_sample, (window_end - start_bound) // time_sample
+        sample_start, sample_end = (window_start - start_bound) // time_sample, (
+            window_end - start_bound) // time_sample
         for sample_iter_idx, sample_idx in enumerate(range(sample_start, sample_end + 1)):
             if sample_idx < 0 or sample_idx >= len(dataframe.index):
                 continue

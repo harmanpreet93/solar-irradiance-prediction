@@ -1,21 +1,24 @@
-import datetime
+import h5py
 import typing
-from model_logging import get_logger
-
-import tensorflow as tf
+import datetime
 import pandas as pd
 import numpy as np
-
+import tensorflow as tf
+from sklearn.preprocessing import OneHotEncoder
+from numpy.core._multiarray_umath import ndarray
+from model_logging import get_logger
+import glob
 
 class DataLoader():
 
     def __init__(
-        self,
-        dataframe: pd.DataFrame,
-        target_datetimes: typing.List[datetime.datetime],
-        stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
-        target_time_offsets: typing.List[datetime.timedelta],
-        config: typing.Dict[typing.AnyStr, typing.Any],
+            self,
+            dataframe: pd.DataFrame,
+            target_datetimes: typing.List[datetime.datetime],
+            stations: typing.Dict[typing.AnyStr, typing.Tuple[float, float, float]],
+            target_time_offsets: typing.List[datetime.timedelta],
+            config: typing.Dict[typing.AnyStr, typing.Any],
+            data_folder: typing.AnyStr
     ):
         """
         Copy-paste from evaluator.py:
@@ -35,6 +38,7 @@ class DataLoader():
         self.stations = list(stations.keys())
         self.config = config
         self.target_time_offsets = target_time_offsets
+        self.data_folder = data_folder
         self.initialize()
 
     def initialize(self):
@@ -42,66 +46,60 @@ class DataLoader():
         self.logger.debug("Initialize start")
         self.test_station = self.stations[0]
         self.output_seq_len = len(self.target_time_offsets)
+        self.data_files_list = glob.glob(self.data_folder + "/*.hdf5")
+        # sort required for evaluator script
+        self.data_files_list.sort()
+
+        stations = np.array([b"BND", b"TBL", b"DRA", b"FPK", b"GWN", b"PSU", b"SXF"])
+        self.encoder = OneHotEncoder(sparse=False)
+        stations = stations.reshape(len(stations), 1)
+        self.encoder.fit(stations)
+
         self.data_loader = tf.data.Dataset.from_generator(
             self.data_generator_fn,
-            output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32, tf.float32)
-        )
+            output_types=(tf.float32, tf.float32, tf.float32, tf.bool, tf.float32, tf.float32, tf.float32)
+        ).prefetch(tf.data.experimental.AUTOTUNE)
 
-    def get_ghi_values(self, batch_of_datetimes, station_id):
-        batch_size = len(batch_of_datetimes)
-        batch_of_clearsky_GHIs = np.zeros((batch_size, self.output_seq_len))
-        batch_of_true_GHIs = np.zeros((batch_size, self.output_seq_len))
+    def to_cyclical_secondofday(self, date):
+        SECONDS_PER_DAY = 24 * 60 * 60
+        second_of_day = (date.hour * 60 + date.minute) * 60 + date.second
+        day_cycle_rad = second_of_day / SECONDS_PER_DAY * 2.0 * np.pi
+        day_cycle_x = np.sin(day_cycle_rad)
+        day_cycle_y = np.cos(day_cycle_rad)
+        return pd.DataFrame(day_cycle_x), pd.DataFrame(day_cycle_y)
 
-        for i, dt in enumerate(batch_of_datetimes):
-            for j, time_offset in enumerate(self.target_time_offsets):
-                dt_index = dt + time_offset
-                batch_of_clearsky_GHIs[i, j] = self.dataframe.lookup([dt_index], [station_id + '_CLEARSKY_GHI'])
-                # If the true GHI is not provided, return 0s instead:
-                if station_id + "_GHI" in self.dataframe.columns:
-                    batch_of_true_GHIs[i, j] = self.dataframe.lookup([dt_index], [station_id + '_GHI'])
+    def to_cyclical_dayofyear(self, date):
+        DAYS_PER_YEAR = 365
+        year_cycle_rad = date.dayofyear / DAYS_PER_YEAR
+        year_cycle_x = np.sin(year_cycle_rad)
+        year_cycle_y = np.cos(year_cycle_rad)
+        return pd.DataFrame(year_cycle_x), pd.DataFrame(year_cycle_y)
 
-        batch_of_true_GHIs = np.nan_to_num(batch_of_true_GHIs)  # TODO: We only convert nan to 0 for now
+    def create_sin_cos(self, date):
+        date = date.astype('U50')
+        date = pd.to_datetime(date.flatten())
+        day_cycle_x, day_cycle_y = self.to_cyclical_secondofday(date)
+        year_cycle_x, year_cycle_y = self.to_cyclical_dayofyear(date)
+        return np.array(pd.concat((day_cycle_x, day_cycle_y, year_cycle_x, year_cycle_y), axis=1))
 
-        return batch_of_true_GHIs, batch_of_clearsky_GHIs
-
-    def get_image_data(self, batch_of_datetimes):
-        nb_channels = self.config["nb_channels"]
-        image_size_m = self.config["image_size_m"]
-        image_size_n = self.config["image_size_n"]
-        input_seq_length = self.config["input_seq_length"]
-        batch_size = len(batch_of_datetimes)
-        # TODO: Not implemented yet, generate random data instead
-        image = tf.random.uniform(
-            shape=(batch_size, input_seq_length, image_size_m, image_size_n, nb_channels)
-        )
-        return image
-
-    def get_nighttime_flags(self, batch_of_datetimes):
-        batch_size = len(batch_of_datetimes)
-        # TODO: Return real nighttime flags; assume no nighttime values for now
-        return np.zeros(shape=(batch_size, 4), dtype=bool)
-
-    def get_onehot_station_id(self, batch_of_datetimes):
-        # TODO: Return onehot-encoded station ids
-        batch_size = len(batch_of_datetimes)
-        stations = ["BND", "TBL", "DRA", "FPK", "GWN", "PSU", "SXF"]
-        station_ids = np.zeros(shape=(batch_size, len(stations)))
-        station_ids[:, -1] = 1.0
-        return station_ids
+    def get_onehot_station_id(self, station_ids):
+        return self.encoder.transform(station_ids)
 
     def data_generator_fn(self):
-        batch_size = self.config["batch_size"]
-        for station_id in self.stations:
-            for i in range(0, len(self.target_datetimes), batch_size):
-                batch_of_datetimes = self.target_datetimes[i:(i + batch_size)]
-                true_GHIs, clearsky_GHIs = self.get_ghi_values(batch_of_datetimes, station_id)
-                images = self.get_image_data(batch_of_datetimes)
-                night_flags = self.get_nighttime_flags(batch_of_datetimes)
-                station_id_onehot = self.get_onehot_station_id(batch_of_datetimes)
+        for f_path in self.data_files_list:
+            # f_path = os.path.join(self.data_folder, file)
 
-                # Remember that you do not have access to the targets.
-                # Your dataloader should handle this accordingly.
-                yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, true_GHIs
+            with h5py.File(f_path, 'r') as h5_data:
+                images = np.array(h5_data["images"])
+                true_GHIs: ndarray = np.array(h5_data["GHI"])
+                clearsky_GHIs = np.array(h5_data["clearsky_GHI"])
+                station_ids = np.array(h5_data["station_id"])
+                night_flags = np.array(h5_data["night_flags"]).astype(np.bool)
+                station_id_onehot = self.get_onehot_station_id(station_ids)
+                date = np.array(h5_data['datetime_sequence'])
+                date_vector = self.create_sin_cos(date)  # size: batch * 4
+
+                yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, date_vector, true_GHIs
 
     def get_data_loader(self):
         '''

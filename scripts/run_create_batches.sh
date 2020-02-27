@@ -1,0 +1,1 @@
+python ../code/create_batch_files.py ../val_cfg_local.json -u="../code/eval_user_cfg_lstm.json"

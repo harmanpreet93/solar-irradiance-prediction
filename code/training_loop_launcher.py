@@ -5,6 +5,7 @@ import typing
 import argparse
 import datetime
 import pandas as pd
+
 from training_loop import train
 from model_logging import get_logger
 
@@ -39,7 +40,7 @@ def clip_dataframe(dataframe, train_config):
 
 def get_targets(dataframe, config):
     datetimes = [datetime.datetime.fromisoformat(d) for d in config["target_datetimes"]]
-    assert datetimes and all([d in dataframe.index for d in datetimes])
+    # assert datetimes and all([d in dataframe.index for d in datetimes])
 
     stations = config["stations"]
     time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in config["target_time_offsets"]]
@@ -54,8 +55,14 @@ def select_model(user_config):
         from clearsky_model import MainModel
     elif user_config["target_model"] == "3d_cnn_model":
         from cnn_3d_model import MainModel
+    elif user_config["target_model"] == "large_3d_cnn_model":
+        from large_3d_cnn_model import MainModel
+    elif user_config["target_model"] == "time_distributed_lstm_model":
+        from conv_lstm_time_distributed_model import MainModel
+    elif user_config["target_model"] == "conv_lstm_model":
+        from conv_lstm_model import MainModel
     else:
-        raise Exception("Unknown model")
+        raise Exception("Unknown model {}".format(user_config["target_model"]))
 
     return MainModel
 
@@ -65,7 +72,6 @@ def main(
         val_config_path: typing.AnyStr,
         user_config_path: typing.Optional[typing.AnyStr] = None,
 ) -> None:
-
     user_config, train_config, val_config, dataframe = \
         load_files(user_config_path, train_config_path, val_config_path)
 
@@ -99,11 +105,14 @@ def main(
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("train_cfg_path", type=str,
-                        help="path to the JSON config file used to store training set parameters")
+                        help="path to the JSON config file used to store training set parameters",
+                        default="../train_cfg_local.json.json")
     parser.add_argument("val_cfg_path", type=str,
-                        help="path to the JSON config file used to store validation set parameters")
-    parser.add_argument("-u", "--user_cfg_path", type=str, default=None,
-                        help="path to the JSON config file used to store user model/dataloader parameters")
+                        help="path to the JSON config file used to store validation set parameters",
+                        default="../val_cfg_local.json")
+    parser.add_argument("-u", "--user_cfg_path", type=str,
+                        help="path to the JSON config file used to store user model/dataloader parameters",
+                        default="eval_user_cfg.json")
     return parser.parse_args()
 
 

@@ -53,7 +53,7 @@ def load_df(user_config):
 def get_datetimes_with_past_im_avail(candidate_datetimes, user_config):
     delta_time = user_config["delta_time"]
     nb_images_for_training = 3
-    timedeltas = pd.timedelta_range(start=delta_time, periods=(nb_images_for_training-1), freq=delta_time)
+    timedeltas = pd.timedelta_range(start=delta_time, periods=(nb_images_for_training - 1), freq=delta_time)
 
     final_datetimes = []
     for candidate_datetime in candidate_datetimes:
@@ -79,7 +79,7 @@ def write_datetimes_to_json_cfg_file(train_timestamps, val_timestamps, user_conf
     }
 
     train_output = {
-        "dataframe_path": "data/catalog.helios.public.20100101-20160101.pkl",
+        "dataframe_path": "../data/catalog.helios.public.20100101-20160101.pkl",
         "start_bound": user_config["start_bound_train"],
         "end_bound": user_config["end_bound_train"],
         "stations": stations_dict,
@@ -92,7 +92,7 @@ def write_datetimes_to_json_cfg_file(train_timestamps, val_timestamps, user_conf
 
     train_output["target_datetimes"] = train_datetimes
 
-    with open('train_cfg.json', 'w') as outfile:
+    with open('../train_cfg.json', 'w') as outfile:
         json.dump(train_output, outfile, indent=2)
 
     val_output = train_output
@@ -100,7 +100,7 @@ def write_datetimes_to_json_cfg_file(train_timestamps, val_timestamps, user_conf
     val_output["start_bound"] = user_config["start_bound_val"]
     val_output["end_bound"] = user_config["end_bound_val"]
 
-    with open('val_cfg.json', 'w') as outfile:
+    with open('../val_cfg.json', 'w') as outfile:
         json.dump(val_output, outfile, indent=2)
 
 
