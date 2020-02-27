@@ -1,4 +1,3 @@
-import os
 import h5py
 import typing
 import datetime
@@ -48,6 +47,7 @@ class DataLoader():
         self.test_station = self.stations[0]
         self.output_seq_len = len(self.target_time_offsets)
         self.data_files_list = glob.glob(self.data_folder + "/*.hdf5")
+        # sort required for evaluator script
         self.data_files_list.sort()
 
         stations = np.array([b"BND", b"TBL", b"DRA", b"FPK", b"GWN", b"PSU", b"SXF"])
@@ -98,11 +98,6 @@ class DataLoader():
                 station_id_onehot = self.get_onehot_station_id(station_ids)
                 date = np.array(h5_data['datetime_sequence'])
                 date_vector = self.create_sin_cos(date)  # size: batch * 4
-                # print(images.shape)
-                # print("*********************************")
-                # print(true_GHIs)
-                # print(clearsky_GHIs)
-                # print("*********************************")
 
                 yield images, clearsky_GHIs, true_GHIs, night_flags, station_id_onehot, date_vector, true_GHIs
 

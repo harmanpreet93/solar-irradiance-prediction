@@ -1,5 +1,5 @@
 {
-  "model_file": "../model_conv_lstm_1/my_model.index",
+  "model_file": "../model/my_model.index",
   "target_model": "conv_lstm_model",
   "nb_feature_maps": 28,
   "nb_dense_units": 128,
@@ -25,8 +25,8 @@
   "ignore_checkpoints": false,
   "dataframe_path": "/project/cq-training-1/project1/teams/team08/data/catalog.helios.public.20100101-20160101.pkl",
   "model_info": "../model/training_info.npy",
-  "train_data_folder": "/project/cq-training-1/project1/teams/team08/data/train",
-  "val_data_folder": "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_3_test",
+  "train_data_folder": "/project/cq-training-1/project1/teams/team08/data/evaluator_script_train",
+  "val_data_folder": "/project/cq-training-1/project1/teams/team08/data/evaluator_script_val",
   "input_time_offsets": [
     "P0DT0H0M0S",
     "P0DT0H30M0S",

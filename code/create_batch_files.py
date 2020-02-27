@@ -83,15 +83,9 @@ def save_image_and_batch(dir_path,
         f.create_dataset("night_flags", shape=night_time_flags.shape, dtype=np.float32, data=night_time_flags)
         station_ids = [n.encode("ascii", "ignore") for n in station_ids]
         f.create_dataset("station_id", shape=(len(station_ids), 1), dtype='S10', data=station_ids)
+
+        # save station specific date in h5 file:  you can get other timestamps by adding/subtracting to this timestamp
         datetime_sequence = [str(n).encode("ascii", "ignore") for n in datetime_sequence]
-
-        # print("Date seq: ",datetime_sequence.shape)
-        #
-        # for i in range(len(datetime_sequence)):
-        #     for j in range(len(datetime_sequence[i])):
-        #         datetime_sequence[i][j] = str(datetime_sequence[i][j]).encode("ascii", "ignore")
-
-        # print("Date seq after: ", datetime_sequence)
         f.create_dataset("datetime_sequence", shape=(len(datetime_sequence), 1), dtype='S100', data=datetime_sequence)
 
 
@@ -200,14 +194,6 @@ def get_ClearSkyGHIs(dataframe, target_time_offsets, timestamp, station_id, is_e
             clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]
         except:
             clearSkyGHIs[3] = 1
-
-    # try:
-    #     clearSkyGHIs[0] = dataframe.loc[timestamp][clearSkyGHI_col]  # T0_GHI
-    #     clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]  # T1_GHI
-    #     clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]  # T3_GHI
-    #     clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][clearSkyGHI_col]  # T6_GHI
-    # except:
-    #     return None
 
     # if we still encounter NaN, handle it
     if np.any(np.isnan(clearSkyGHIs)):
@@ -345,12 +331,10 @@ def crop_images(df,
             cropped_img = normalize_images(cropped_img)
 
             cropped_img = np.expand_dims(cropped_img, axis=0)
-            # print("Cropped img size: {}".format(cropped_img.shape))
 
             image_crops_per_stations.append(cropped_img)
             # timestamp_as_per_station_timezone = get_station_specific_time(timestamp, station_id, time_zone_mapping)
             # timestamps.append(np.expand_dims(timestamp_as_per_station_timezone, axis=0))
-
             # image_crops_for_stations.append(cropped_img)
 
             # get true GHIs only for first timestamp - T0
@@ -359,6 +343,7 @@ def crop_images(df,
                 clearSkyGHIs = get_ClearSkyGHIs(big_df, target_time_offsets, timestamp, station_id, is_eval)
                 night_time_flags = get_night_time_flags(big_df, target_time_offsets, timestamp, station_id, is_eval)
 
+                # we don't need GHIs during evaluation
                 if is_eval:
                     trueGHIs = [0] * 4
 
@@ -386,21 +371,14 @@ def crop_images(df,
         image_crops_per_stations = np.array(image_crops_per_stations)
         # timestamps = np.array(timestamps)
 
-        # print("T_{} timstamp Images size: {}\n".format(i, image_crops_per_stations.shape))
-
         # image_crops_for_stations.append(image_crops_per_stations)
         if len(image_crops_for_stations) == 0:
             image_crops_for_stations = image_crops_per_stations
             # considered_timestamps = timestamps
         else:
-            # print("before appending, total size: {}".format(image_crops_for_stations.shape))
             image_crops_for_stations = np.concatenate((image_crops_for_stations, image_crops_per_stations), axis=1)
             # considered_timestamps = np.concatenate((considered_timestamps, timestamps), axis=1)
-            # print("Harman: ",considered_timestamps.shape, np.array(timestamps).shape)
-            # print("after appending, total size: {}\n".format(image_crops_for_stations.shape))
 
-    # print("******harman: ", np.array(image_crops_for_stations).shape, np.array(considered_timestamps).shape)
-    # print("\n*****************returning now\n")
     return np.array(image_crops_for_stations), np.array(true_ghis_for_station), np.array(
         clearSky_ghis_for_station), np.array(station_ids), np.array(considered_timestamps), np.array(
         night_time_flags_for_station)
@@ -408,7 +386,6 @@ def crop_images(df,
 
 def save_batches(main_df, dataframe, stations_coordinates, user_config, train_config, save_dir_path, start_index,
                  end_index, mini_batch_size, is_eval=False):
-
     input_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in user_config["input_time_offsets"]]
     target_time_offsets = [pd.Timedelta(d).to_pytimedelta() for d in train_config["target_time_offsets"]]
     time_zone_mapping = {k: pd.Timedelta(d).to_pytimedelta() for k, d in user_config["time_zone_mapping"].items()}
@@ -469,14 +446,6 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
 
         # save h5py file here
         if index >= mini_batch_size:
-            # if index >= mini_batch_size:
-            #     print("Harman: ",concat_images.shape,
-            #           target_trueGHIs.shape,
-            #           target_clearSkyGHIs.shape,
-            #           target_station_ids.shape,
-            #           target_timestamps.shape,
-            #           target_night_time_flags.shape)
-
             assert concat_images.shape[0] == target_trueGHIs.shape[0]
             assert concat_images.shape[0] == target_clearSkyGHIs.shape[0]
             assert concat_images.shape[0] == target_timestamps.shape[0]
@@ -574,15 +543,15 @@ def create_and_save_batches(
     stations_coordinates = get_stations_coordinates(stations)
 
     if is_eval:
+        print("Evaluation: ")
         # print("Handling GHIs...")
         # dataframe = handle_ghi_nans(dataframe, handle_true_ghi=False, handle_clearsky_ghis=True)
 
-        print("Preprocessing data...")
+        print("\nPreprocessing data...")
         # replace nan by np.nan (why??)
         dataframe.replace('nan', np.NaN, inplace=True)
         # dropping records without hdf5 files
         dataframe.drop(dataframe.loc[dataframe['hdf5_8bit_path'].isnull()].index, inplace=True)
-
         # dropping records without ncdf files
         dataframe.drop(dataframe.loc[dataframe['ncdf_path'].isnull()].index, inplace=True)
 
@@ -596,8 +565,6 @@ def create_and_save_batches(
 
         filtered_dataframe_ = filtered_dataframe.loc[target_datetimes]
 
-        # print("harman: ",filtered_dataframe_.shape)
-
         for station, _ in stations.items():
             print("Creating batches for station: {}".format(station))
 
@@ -607,15 +574,6 @@ def create_and_save_batches(
                          admin_config, val_file_path, 0,
                          len(filtered_dataframe_) + 1, mini_batch_size, is_eval)
 
-            # my_val_args = []
-            # for i in range(0, len(filtered_dataframe_), step_size):
-            #     args = (filtered_dataframe_, dataframe, {station: stations_coordinates[station]}, user_config, admin_config, val_file_path, int(i),
-            #             int(i) + step_size, mini_batch_size, is_eval)
-            #     my_val_args.append(args)
-            #
-            # p = multiprocessing.Pool(1)
-            # # print("Saving batches for evaluation now...")
-            # p.starmap(save_batches, my_val_args)
             print("Done")
 
     else:
@@ -631,12 +589,9 @@ def create_and_save_batches(
         my_train_args = []
         mini_batch_size = user_config['mini_batch_size']
         step_size = 500
-
         train_file_path = "/project/cq-training-1/project1/teams/team08/data/train_crops_seq_3_harman"
-
         # renaming it to save in the same folder as train
         val_file_path = "/project/cq-training-1/project1/teams/team08/data/train_crops_seq_3_harman"
-
         # print("Save path: ", train_file_path)
 
         for i in range(0, len(train_dataframe) + 1000, step_size):
@@ -645,7 +600,6 @@ def create_and_save_batches(
                 int(i) + step_size, mini_batch_size)
             my_train_args.append(args)
 
-        # val_file_path = user_config['val_data_folder']
         my_val_args = []
         for i in range(0, len(val_dataframe) + 1000, step_size):
             args = (val_dataframe, dataframe, stations_coordinates, user_config, admin_config, val_file_path, int(i),
@@ -676,46 +630,3 @@ if __name__ == "__main__":
         user_config_path=args.user_cfg_path,
         is_eval=False
     )
-
-    # user_config_path = "eval_user_cfg_lstm.json"
-    # train_config_path = "../train_cfg.json"
-    #
-    # user_config = load_file(user_config_path, "user")
-    # train_config = load_file(train_config_path, "training")
-    #
-    # dataframe_path = user_config["dataframe_path"]
-    # dataframe = pd.read_pickle(dataframe_path)
-    # dataframe = handle_ghi_nans(dataframe)
-    #
-    # train_dataframe = dataframe.loc['2010-01-01':'2015-01-01']
-    # val_dataframe = dataframe.loc['2015-01-01':'2015-12-31']
-    #
-    # stations = train_config["stations"]
-    # train_dataframe = preprocess_dataframe(train_dataframe, stations)
-    # val_dataframe = preprocess_dataframe(val_dataframe, stations)
-    #
-    # # get station coordinates, need to be called only once, or save its value in config file
-    # stations_coordinates = get_stations_coordinates(stations)
-    #
-    # train_file_path = "/project/cq-training-1/project1/teams/team08/data/train_crops_seq_5"
-    # my_train_args = []
-    # mini_batch_size = 256
-    # step_size = 500
-    #
-    # for i in range(0, 90000, step_size):
-    #     args = (train_dataframe, dataframe, stations_coordinates, user_config, train_config, train_file_path, int(i),
-    #             int(i) + step_size, mini_batch_size)
-    #     my_train_args.append(args)
-    #
-    # val_file_path = "/project/cq-training-1/project1/teams/team08/data/val_crops_seq_5_new"
-    # my_val_args = []
-    # for i in range(0, 20000, step_size):
-    #     args = (val_dataframe, dataframe, stations_coordinates, user_config, train_config, val_file_path, int(i),
-    #             int(i) + step_size, mini_batch_size)
-    #     my_val_args.append(args)
-    #
-    # p = multiprocessing.Pool(4)
-    # print("Saving batches now...")
-    # # p.starmap(save_batches, my_train_args)
-    # p.starmap(save_batches, my_val_args)
-    # print("Done")
