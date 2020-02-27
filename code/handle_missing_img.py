@@ -8,6 +8,7 @@ import typing
 from pathlib import Path
 from scipy import interpolate
 
+
 def interpolate_images(data):
     print("Interpolating missing image ...")
     data2 = np.copy(data.astype(float))
@@ -24,12 +25,11 @@ def interpolate_images(data):
 
     return data2
 
+
 def handle_missing_img(hdf5_file, channel):
     # get LUT dataset
     ch_lut_name = channel + "_LUT"
     ch_lut = hdf5_file[ch_lut_name][()]
-    # identify the offset of missing images
-    missing_idx = np.where(np.equal(ch_lut, -1))
 
     # flatten and stack the images vertically
     flat_img = np.zeros((650*1500))
@@ -44,6 +44,7 @@ def handle_missing_img(hdf5_file, channel):
     interp_img = interpolate_images(flat_img[1:])
 
     return interp_img
+
 
 def handle_missing_img2(vec1, vec2):
 
