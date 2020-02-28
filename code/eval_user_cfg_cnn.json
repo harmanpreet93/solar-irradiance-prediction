@@ -32,7 +32,7 @@
   "model_info": "../model/training_info.npy",
 
   "train_data_folder": "/project/cq-training-1/project1/teams/team08/data/evaluator_script_train_cnn",
-  "val_data_folder": "/project/cq-training-1/project1/teams/team08/data/evaluator_script_val_cnn",
+  "val_data_folder": "../data/evaluator_script_val_cnn",
 
   "input_time_offsets": [
     "P0DT0H0M0S",
