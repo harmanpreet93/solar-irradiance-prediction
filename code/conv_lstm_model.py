@@ -39,7 +39,6 @@ class MainModel(tf.keras.Model):
         nb_channels = self.config["nb_channels"]
         image_size_m = self.config["image_size_m"]
         image_size_n = self.config["image_size_n"]
-        input_seq_length = self.config["input_seq_length"]
 
         self.conv3d_1 = tf.keras.layers.Conv2D(
             filters=self.config["nb_feature_maps"],

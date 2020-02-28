@@ -115,34 +115,34 @@ def get_TrueGHIs(dataframe, target_time_offsets, timestamp, station_id, is_eval=
     # using clearsky value to interpolate
     try:
         trueGHIs[0] = dataframe.loc[timestamp][GHI_col]  # T0_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             trueGHIs[0] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             trueGHIs[0] = 0
 
     try:
         trueGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][GHI_col]  # T1_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             trueGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             pass
 
     try:
         trueGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][GHI_col]  # T3_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             trueGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             pass
 
     try:
         trueGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][GHI_col]  # T6_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             trueGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             pass
 
     # if we still encounter NaN, handle it
@@ -165,34 +165,34 @@ def get_ClearSkyGHIs(dataframe, target_time_offsets, timestamp, station_id, is_e
     # if timestamp missing
     try:
         clearSkyGHIs[0] = dataframe.loc[timestamp][clearSkyGHI_col]  # T0_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             clearSkyGHIs[0] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             clearSkyGHIs[0] = 0
 
     try:
         clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]  # T1_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             clearSkyGHIs[1] = dataframe.loc[timestamp + target_time_offsets[0]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             clearSkyGHIs[1] = 1
 
     try:
         clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]  # T3_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             clearSkyGHIs[2] = dataframe.loc[timestamp + target_time_offsets[1]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             clearSkyGHIs[2] = 1
 
     try:
         clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[3]][clearSkyGHI_col]  # T6_GHI
-    except Exception as e:
+    except Exception as _:
         try:
             clearSkyGHIs[3] = dataframe.loc[timestamp + target_time_offsets[2]][clearSkyGHI_col]
-        except Exception as e:
+        except Exception as _:
             clearSkyGHIs[3] = 1
 
     # if we still encounter NaN, handle it
@@ -215,21 +215,21 @@ def get_night_time_flags(dataframe, target_time_offsets, timestamp, station_id, 
     # if timestamp missing
     try:
         night_time_flags[0] = dataframe.loc[timestamp][DAYTIME_col]  # T0_GHI
-    except Exception as e:
+    except Exception as _:
         night_time_flags[0] = 1.0
     try:
         night_time_flags[1] = dataframe.loc[timestamp + target_time_offsets[1]][DAYTIME_col]  # T1_GHI
-    except Exception as e:
+    except Exception as _:
         night_time_flags[1] = 1.0
 
     try:
         night_time_flags[2] = dataframe.loc[timestamp + target_time_offsets[2]][DAYTIME_col]  # T3_GHI
-    except Exception as e:
+    except Exception as _:
         night_time_flags[2] = 1.0
 
     try:
         night_time_flags[3] = dataframe.loc[timestamp + target_time_offsets[3]][DAYTIME_col]  # T6_GHI
-    except Exception as e:
+    except Exception as _:
         night_time_flags[3] = 1.0
 
     # if we still encounter NaN, handle it
@@ -273,7 +273,7 @@ def crop_images(df,
         # print("Reading timestamp: {}".format(timestamp))
         try:
             row = df.loc[timestamp]
-        except Exception as e:
+        except Exception as _:
             if index == 0:
                 print("Timestamp {} not found for station {}, Not considering this sequence! \n".format(timestamp,
                                                                                                         coordinates))
@@ -291,7 +291,7 @@ def crop_images(df,
         image_crops_per_stations = []
 
         # get cropped images for stations
-        for i, station_coordinates in enumerate(coordinates.items()):
+        for _, station_coordinates in enumerate(coordinates.items()):
 
             station_id = station_coordinates[0]
             DAYTIME_col = station_id + "_DAYTIME"
@@ -304,15 +304,15 @@ def crop_images(df,
             y_coord = station_coordinates[1][1]
 
             ch1_crop = channels_data[0][x_coord - window_size:x_coord + window_size,
-                       y_coord - window_size:y_coord + window_size]
+                                        y_coord - window_size:y_coord + window_size]
             ch2_crop = channels_data[1][x_coord - window_size:x_coord + window_size,
-                       y_coord - window_size:y_coord + window_size]
+                                        y_coord - window_size:y_coord + window_size]
             ch3_crop = channels_data[2][x_coord - window_size:x_coord + window_size,
-                       y_coord - window_size:y_coord + window_size]
+                                        y_coord - window_size:y_coord + window_size]
             ch4_crop = channels_data[3][x_coord - window_size:x_coord + window_size,
-                       y_coord - window_size:y_coord + window_size]
+                                        y_coord - window_size:y_coord + window_size]
             ch6_crop = channels_data[4][x_coord - window_size:x_coord + window_size,
-                       y_coord - window_size:y_coord + window_size]
+                                        y_coord - window_size:y_coord + window_size]
 
             cropped_img = np.stack((ch1_crop,
                                     ch2_crop,
@@ -396,20 +396,21 @@ def save_batches(main_df, dataframe, stations_coordinates, user_config, train_co
     if not os.path.exists(save_dir_path):
         os.makedirs(save_dir_path)
 
-    for time_index, col in tqdm.tqdm(main_df[start_index:end_index].iterrows()):
+    for time_index, _ in tqdm.tqdm(main_df[start_index:end_index].iterrows()):
         # get past timestamps in range of input_seq_length
         timestamps_from_history = []
         for i in range(user_config["input_seq_length"]):
             timestamps_from_history.append(time_index - input_time_offsets[i])
 
-        images, trueGHIs, clearSkyGHIs, station_ids, timestamps, night_time_flags = crop_images(main_df,
-                                                                                                dataframe,
-                                                                                                timestamps_from_history,
-                                                                                                target_time_offsets,
-                                                                                                stations_coordinates,
-                                                                                                window_size,
-                                                                                                time_zone_mapping,
-                                                                                                is_eval)
+        images, trueGHIs, clearSkyGHIs, station_ids, timestamps, night_time_flags = \
+            crop_images(main_df,
+                        dataframe,
+                        timestamps_from_history,
+                        target_time_offsets,
+                        stations_coordinates,
+                        window_size,
+                        time_zone_mapping,
+                        is_eval)
 
         if images is None:
             # print("No image found for timestamp {}".format(time_index))
