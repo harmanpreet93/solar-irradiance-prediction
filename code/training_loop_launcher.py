@@ -5,7 +5,6 @@ import typing
 import argparse
 import datetime
 import pandas as pd
-
 from training_loop import train
 from model_logging import get_logger
 

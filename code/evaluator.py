@@ -267,10 +267,9 @@ def main(
     with open(preds_output_path + "_true_GHI", "w") as fd:
         for i in range(len(gt)):
             fd.write(str(gt[i]) + ",")
-            if (i+1) % 4 == 0:
+            if (i + 1) % 4 == 0:
                 fd.write("\n")
             # fd.write(",".join([f"{v:0.03f}" for v in gt_.tolist()]) + "\n")
-
 
     gt = gt.reshape((len(target_stations), len(target_datetimes), len(target_time_offsets)))
     day = parse_nighttime_flags(target_stations, target_datetimes, target_time_offsets, dataframe)

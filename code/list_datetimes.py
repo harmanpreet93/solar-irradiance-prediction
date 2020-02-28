@@ -3,7 +3,6 @@ import numpy as np
 import json
 import datetime
 import os
-import h5py
 import argparse
 import typing
 

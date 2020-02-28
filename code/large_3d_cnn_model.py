@@ -1,6 +1,5 @@
 import typing
 import datetime
-import numpy as np
 import tensorflow as tf
 from model_logging import get_logger
 from training_loop import k_to_true_ghi
