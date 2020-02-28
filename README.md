@@ -21,14 +21,6 @@ OR
 * Hold out 1 year of data
 * No use of k-fold until pipeline is optimized
 
-### Coding Standards
-
-* Lint your code as per PEP8 before submitting a pull request
-* Pull requests are required for merging to master for major changes
-* Use your own branch for major work, don't use master
-* No large files allowed in git
-* Mark task in progress on Kanban before starting work
-
 ### To setup a new local environment:
 
 ```console
@@ -59,4 +51,11 @@ Run the commands to synchronize data from the server and to launch tensorboard:
 ./run_tensorboard.sh
 ```
 Use a web browser to visit: http://localhost:6006/
+
+### Coding Standards
+
+* Lint your code as per PEP8 before submitting a pull request
+* Pull requests are required for merging to master for major changes
+* Use git branch
+* No large files allowed in git
 
