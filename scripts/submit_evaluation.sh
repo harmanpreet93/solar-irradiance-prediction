@@ -1,3 +1,8 @@
+#!/bin/bash
+#SBATCH --time=60:00
+#SBATCH --gres=gpu:k20:1
+#SBATCH --cpus-per-task=4
+#SBATCH --mem=4000M
 date
 source /project/cq-training-1/project1/teams/team08/server_env/bin/activate
 date

@@ -298,17 +298,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
     parser.add_argument("preds_out_path", type=str,
-                        help="path where the raw model predictions should be saved (for visualization purposes)",
-                        default="../log/output.txt")
+                        help="path where the raw model predictions should be saved (for visualization purposes)")
     parser.add_argument("admin_cfg_path", type=str,
-                        help="path to the JSON config file used to store test set/evaluation parameters",
-                        default="../val_cfg_local.json")
+                        help="path to the JSON config file used to store test set/evaluation parameters")
     parser.add_argument("-u", "--user_cfg_path", type=str,
-                        help="path to the JSON config file used to store user model/dataloader parameters",
-                        default="eval_user_cfg_lstm.json")
+                        help="path to the JSON config file used to store user model/dataloader parameters")
     parser.add_argument("-s", "--stats_output_path", type=str,
-                        help="path where the prediction stats should be saved (for benchmarking)",
-                        default="../log/output.txt")
+                        help="path where the prediction stats should be saved (for benchmarking)")
 
     args = parser.parse_args()
     main(
@@ -317,10 +313,3 @@ if __name__ == "__main__":
         user_config_path=args.user_cfg_path,
         stats_output_path=args.stats_output_path,
     )
-
-    # preds_output_path = "../log/output.txt"
-    # admin_config_path = "../val_cfg_local.json"
-    # user_config_path = "../code/eval_user_cfg_lstm.json"
-    # stats_output_path = "../log/output.txt"
-    #
-    # main(preds_output_path, admin_config_path, user_config_path, stats_output_path)

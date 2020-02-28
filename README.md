@@ -2,6 +2,20 @@
 
 ### Team 08
 
+### To run the evaluation script:
+
+```console
+1. cd scripts/
+2. Update submit_evalution.sh 
+3. sbatch submit_evalution.sh
+```
+OR
+```console
+1. cd scripts/
+2. Update run_evaluatior.sh 
+3. Run run_evaluatior.sh
+```
+
 ### K-Fold Strategy
 
 * Hold out 1 year of data
@@ -14,13 +28,6 @@
 * Use your own branch for major work, don't use master
 * No large files allowed in git
 * Mark task in progress on Kanban before starting work
-
-### To run the evaluation script:
-
-```console
-source ../default_env/bin/activate
-./run_evaluator.sh
-```
 
 ### To setup a new local environment:
 
