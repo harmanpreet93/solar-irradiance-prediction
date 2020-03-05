@@ -16,11 +16,6 @@ OR
 3. Run run_evaluatior.sh
 ```
 
-### K-Fold Strategy
-
-* Hold out 1 year of data (2015)
-* No use of k-fold until pipeline is optimized
-
 ### To setup a new local environment:
 
 ```console
@@ -52,11 +47,16 @@ Run the commands to synchronize data from the server and to launch tensorboard:
 ```
 Use a web browser to visit: http://localhost:6006/
  
- ## CNN Architecture 
+ ### CNN Architecture 
  * CNN followed by dense layers along with the metadata information
 ![CNN](https://github.com/harmanpreet93/Solar-irradiance-prediction/blob/master/Notebooks/CNN.png)  
 ![NN](https://github.com/harmanpreet93/Solar-irradiance-prediction/blob/master/Notebooks/NN.png)
  
+ 
+### K-Fold Strategy
+
+* Hold out 1 year of data (year 2015)
+* No use of k-fold until pipeline is optimized
  
 ### Coding Standards
 
