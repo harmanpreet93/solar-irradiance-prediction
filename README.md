@@ -65,3 +65,5 @@ Use a web browser to visit: http://localhost:6006/
 * Use git branch
 * No large files allowed in git  
 
+### License  
+Apache 2.0
